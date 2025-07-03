@@ -81,7 +81,7 @@ npm-publish:
 
 npm-test:
 	npm pack
-	npm install -g ./git-changelog-generator-*.tgz
+	npm install -g --force ./git-changelog-tool-*.tgz
 	@echo "Testing all global commands..."
 	git-changelog --help
 	git-changelog-sh --help
@@ -92,7 +92,7 @@ npm-test:
 	git-changelog --since "1 week ago" --format json > test-output.json
 	git-tag-changelog --auto-increment patch --dry-run
 	@echo "NPM package test completed"
-	npm uninstall -g git-changelog-generator
+	npm uninstall -g git-changelog-tool
 	rm -f test-output.json *.tgz
 
 # Test targets
