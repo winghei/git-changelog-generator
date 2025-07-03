@@ -401,6 +401,42 @@ update_package_json() {
     fi
 }
 
+# Function to commit changelog and package.json changes
+commit_changes() {
+    local version="$1"
+    local changelog_file="$2"
+    
+    log "Committing changelog and package.json changes"
+    if [[ "$DRY_RUN" == "false" ]]; then
+        # Add files to git
+        git add "$changelog_file"
+        if [[ -f "package.json" ]]; then
+            git add "package.json"
+        fi
+        
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+            log_info "No changes to commit"
+            return 0
+        fi
+        
+        # Commit with conventional commit message
+        local commit_message="chore(release): prepare release $version
+
+- Update CHANGELOG.md with release notes
+- Bump package.json version to $version"
+        
+        git commit -m "$commit_message"
+        log_success "Committed release changes for $version"
+    else
+        log_info "Would add: $changelog_file"
+        if [[ -f "package.json" ]]; then
+            log_info "Would add: package.json"
+        fi
+        log_info "Would commit: chore(release): prepare release $version"
+    fi
+}
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -515,6 +551,9 @@ main() {
     
     # Update package.json
     update_package_json "$version"
+    
+    # Commit changes
+    commit_changes "$version" "$CHANGELOG_FILE"
     
     # Create tag
     create_tag "$version"
