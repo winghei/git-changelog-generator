@@ -18,17 +18,17 @@ from typing import List, Dict, Optional
 class GitChangelogGenerator:
     def __init__(self):
         self.commit_types = {
-            'feat': 'Features',
-            'fix': 'Bug Fixes',
-            'docs': 'Documentation',
-            'style': 'Styles',
-            'refactor': 'Code Refactoring',
-            'perf': 'Performance Improvements',
-            'test': 'Tests',
-            'chore': 'Chores',
-            'ci': 'CI/CD',
-            'build': 'Build System',
-            'revert': 'Reverts'
+            'feat': '✨ Features',
+            'fix': '🐛 Bug Fixes',
+            'docs': '📚 Documentation',
+            'style': '💄 Styles',
+            'refactor': '♻️ Code Refactoring',
+            'perf': '⚡ Performance Improvements',
+            'test': '🧪 Tests',
+            'chore': '🔧 Chores',
+            'ci': '👷 CI/CD',
+            'build': '📦 Build System',
+            'revert': '⏪ Reverts'
         }
 
     def run_git_command(self, command: List[str]) -> str:
@@ -144,10 +144,10 @@ class GitChangelogGenerator:
                     
                     markdown += f"- {subject} ([{commit['hash'][:8]}](../../commit/{commit['hash']}))\n"
                     if commit['body'].strip():
-                        # Add body on the second line
+                        # Add body on the second line with proper markdown line break
                         body_lines = [line.strip() for line in commit['body'].split('\n') if line.strip()]
                         if body_lines:
-                            markdown += f"  {body_lines[0]}\n"
+                            markdown += f"\n  {body_lines[0]}\n"
                 
                 markdown += "\n"
         
