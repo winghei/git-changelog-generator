@@ -6,25 +6,67 @@ A comprehensive collection of tools to generate, format, and visualize changelog
 
 - `git_changelog.py` - Full-featured Python script with advanced categorization
 - `git_changelog.sh` - Lightweight shell script for quick usage  
+- `git_tag_changelog.sh` - Combined git tag and changelog generation tool
 - `Makefile` - Convenient targets for common operations
 - `parser/` - Web-based JSON parser and visualization tool
 
+## Installation
+
+### Global Installation (Recommended)
+```bash
+# Install globally from npm
+npm install -g git-changelog-generator
+
+# Now you can run from anywhere:
+git-changelog --since "1 week ago"
+git-tag-changelog --auto-increment patch
+git-changelog-parser
+```
+
+### Local Installation
+```bash
+# Install locally in your project
+npm install git-changelog-generator
+
+# Run via npx
+npx git-changelog --since "1 week ago"
+npx git-tag-changelog 1.2.3
+npx git-changelog-parser
+```
+
+### Direct Usage (No Installation)
+```bash
+# Clone the repository
+git clone https://github.com/winghei/git-changelog-generator.git
+cd git-changelog-generator
+make install
+
+# Use directly
+./git_changelog.sh --since "1 week ago"
+./git_tag_changelog.sh --auto-increment patch
+```
+
 ## Quick Start
 
-1. Make scripts executable:
+1. **Global Installation:**
    ```bash
-   make install
+   npm install -g git-changelog-generator
+   git-changelog --since "1 week ago"
    ```
 
-2. Generate a simple changelog:
+2. **Generate and visualize changelog:**
    ```bash
-   ./git_changelog.sh --since "1 week ago"
+   git-changelog --since "1 month ago" --format json --output changelog.json
+   git-changelog-parser  # Opens web parser in browser
    ```
 
-3. Generate a JSON changelog and visualize it:
+3. **Create releases with tags and changelogs:**
    ```bash
-   ./git_changelog.sh --since "1 month ago" --format json --output changelog.json
-   # Then open parser/index.html in your browser and load changelog.json
+   # Auto-increment patch version and create tag
+   git-tag-changelog --auto-increment patch
+   
+   # Create specific version tag
+   git-tag-changelog 1.2.3 --push
    ```
 
 ## Command-Line Tools
@@ -57,6 +99,48 @@ The shell script provides quick changelog generation with JSON and text output f
 - `-o, --output` - Output file (default: stdout)
 - `-t, --title` - Title for the changelog (default: Changelog)
 - `--include-time` - Include commit time in the output
+
+### Git Tag and Changelog Tool (`git_tag_changelog.sh`)
+
+The git tag and changelog tool combines version tagging with changelog generation for automated release workflows:
+
+```bash
+# Auto-increment version and create tag with changelog
+./git_tag_changelog.sh --auto-increment patch
+
+# Create specific version tag
+./git_tag_changelog.sh 1.2.3 --message "Major release" --push
+
+# Dry run to see what would happen
+./git_tag_changelog.sh --auto-increment minor --dry-run
+
+# Use Python script for changelog generation
+./git_tag_changelog.sh 2.0.0 --python --format markdown
+```
+
+#### Tag and Changelog Options
+
+- `VERSION` - Version to tag (e.g., "1.2.3")
+- `--auto-increment TYPE` - Auto-increment version: major, minor, patch  
+- `-m, --message MSG` - Tag message (default: "Release VERSION")
+- `-p, --prefix PREFIX` - Tag prefix (default: "v")
+- `-f, --format FORMAT` - Changelog format: markdown, json, simple (default: markdown)
+- `-o, --output FILE` - Changelog output file (default: CHANGELOG-VERSION.md)
+- `--since-last-tag` - Generate changelog since last tag (default: true)
+- `--dry-run` - Show what would be done without executing
+- `--force` - Force tag creation (overwrite existing)
+- `--lightweight` - Create lightweight tag instead of annotated
+- `--push` - Push tag to origin after creation
+- `--python` - Use Python script for changelog generation
+
+#### Workflow
+
+1. Validates git repository and working tree
+2. Determines version (provided or auto-incremented)
+3. Generates changelog since last tag or specified date
+4. Creates git tag (annotated or lightweight)
+5. Optionally pushes tag to remote
+6. Updates package.json version if present
 
 ### Python Script (`git_changelog.py`)
 
@@ -119,7 +203,19 @@ The `parser/` directory contains a comprehensive HTML-based tool for visualizing
 
 ### Using the Parser
 
-1. Open `parser/index.html` in any modern web browser
+#### Quick Start (Global Installation)
+```bash
+# Generate JSON changelog
+git-changelog --since "1 week ago" --format json --output changelog.json
+
+# Open parser in browser
+git-changelog-parser
+
+# Drag and drop changelog.json into the parser
+```
+
+#### Manual Setup
+1. Open `parser/index.html` in any modern web browser (or use `make parser`)
 2. Either:
    - **Drag and drop** one or more JSON files onto the interface, OR
    - **Click "Choose File"** and select your JSON file(s)
@@ -217,12 +313,64 @@ Both tools generate/expect JSON in this format:
 
 ## Workflow Examples
 
+### Automated Release Process
+```bash
+# Method 1: Global CLI (after npm install -g)
+git-tag-changelog --auto-increment patch --push
+
+# Method 2: Local CLI (via npx)
+npx git-tag-changelog --auto-increment patch --push
+
+# Method 3: Using shell script directly
+./git_tag_changelog.sh --auto-increment patch --push
+
+# Method 4: Using Makefile targets  
+make release-patch    # Auto-increment patch version
+make release-minor    # Auto-increment minor version  
+make release-major    # Auto-increment major version
+
+# Method 5: Custom version
+make tag-and-changelog VERSION=2.1.0
+
+# Method 6: Using Node.js API
+const GitChangelogGenerator = require('git-changelog-generator');
+const generator = new GitChangelogGenerator();
+
+// Create tag and changelog
+const result = await generator.createTagAndChangelog('1.2.3', {
+  message: 'Release v1.2.3',
+  push: true,
+  format: 'markdown'
+});
+
+// Auto-increment version
+const result = await generator.autoIncrementTag('patch', {
+  dryRun: false,
+  push: true
+});
+```
+
+### Complete Workflow (Global Installation)
+```bash
+# 1. Generate changelog and open parser
+git-changelog --since "1 week ago" --format json --output weekly.json
+git-changelog-parser
+
+# 2. In the parser: drag and drop weekly.json
+# 3. Filter, edit, and analyze the data
+# 4. Export the results
+
+# Alternative: Everything in one flow
+git-changelog --format json --output changelog.json && git-changelog-parser
+```
+
 ### Weekly Team Report
 ```bash
 # Generate JSON changelog for the week
-./git_changelog.sh --since "last monday" --output weekly.json
+git-changelog --since "last monday" --output weekly.json
 
-# Open parser/index.html and load weekly.json
+# Open parser to analyze
+git-changelog-parser
 # Filter by author to see individual contributions
 # Export summary for team meeting
 ```
@@ -270,4 +418,8 @@ The web parser works in all modern browsers supporting:
 ## Dependencies
 
 - **Command-line tools**: No external dependencies (bash, python3, git)
-- **Web parser**: No external libraries (vanilla HTML/CSS/JavaScript) 
+- **Web parser**: No external libraries (vanilla HTML/CSS/JavaScript)
+
+## Development
+
+This project was developed with AI assistance using Claude (Anthropic), which helped design and implement the tag and changelog automation features, comprehensive testing suite, and documentation. The AI provided guidance on best practices for shell scripting, Node.js APIs, and project structure while maintaining the original vision and requirements of the git changelog generator. 

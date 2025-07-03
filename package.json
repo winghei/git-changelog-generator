@@ -1,0 +1,60 @@
+{
+  "name": "git-changelog-generator",
+  "version": "0.0.1",
+  "description": "A comprehensive collection of tools to generate, format, and visualize changelogs from git commit history",
+  "main": "index.js",
+  "bin": {
+    "git-changelog": "./bin/git-changelog.js",
+    "git-changelog-sh": "./bin/git-changelog-sh.js",
+    "git-changelog-py": "./bin/git-changelog-py.js",
+    "git-tag-changelog": "./bin/git-tag-changelog.js",
+    "git-changelog-parser": "./bin/git-changelog-parser.js"
+  },
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "test:api": "node --test test/test-api.js",
+    "test:shell": "node --test test/test-shell.js",
+    "test:python": "node --test test/test-python.js",
+    "test:bin": "node --test test/test-bin.js",
+    "install": "chmod +x git_changelog.sh && chmod +x git_changelog.py && chmod +x git_tag_changelog.sh && chmod +x bin/*.js",
+    "prepublishOnly": "npm run install"
+  },
+  "keywords": [
+    "git",
+    "changelog",
+    "conventional-commits",
+    "release-notes",
+    "commit-history",
+    "cli",
+    "markdown",
+    "json",
+    "parser",
+    "visualization"
+  ],
+  "author": "Sherwin Vizcara<sherwin.vizcara@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/winghei/git-changelog-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/winghei/git-changelog-generator/issues"
+  },
+  "homepage": "https://github.com/winghei/git-changelog-generator#readme",
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "preferGlobal": true,
+  "files": [
+    "git_changelog.sh",
+    "git_changelog.py",
+    "git_tag_changelog.sh",
+    "parser/",
+    "bin/",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {},
+  "devDependencies": {}
+} 
