@@ -144,10 +144,10 @@ class GitChangelogGenerator:
                     
                     markdown += f"- {subject} ([{commit['hash'][:8]}](../../commit/{commit['hash']}))\n"
                     if commit['body'].strip():
-                        # Add body as indented text if it exists
+                        # Add body on the second line
                         body_lines = [line.strip() for line in commit['body'].split('\n') if line.strip()]
                         if body_lines:
-                            markdown += f"  *{body_lines[0]}*\n"
+                            markdown += f"  {body_lines[0]}\n"
                 
                 markdown += "\n"
         
