@@ -233,14 +233,17 @@ generate_changelog() {
     changelog_args+=("--format" "$CHANGELOG_FORMAT")
     changelog_args+=("--output" "$temp_release_file")
     
-    # Add title for this release
-    changelog_args+=("--title" "## [$version] - $(date '+%Y-%m-%d')")
+    # Add title for this release (Python script will format it)
+    changelog_args+=("--title" "Release $version")
     
     # Generate changelog for this release only
     if [[ "$USE_PYTHON" == "true" ]]; then
         log "Generating changelog using Python script..."
         if [[ "$DRY_RUN" == "false" ]]; then
             python3 "$GIT_CHANGELOG_PY" "${changelog_args[@]}"
+            
+            # Set version for append function
+            CURRENT_VERSION="$version"
             
             # Now append to the main changelog file
             append_to_changelog "$temp_release_file" "$output_file"
@@ -252,6 +255,9 @@ generate_changelog() {
         log "Generating changelog using shell script..."
         if [[ "$DRY_RUN" == "false" ]]; then
             bash "$GIT_CHANGELOG_SH" "${changelog_args[@]}"
+            
+            # Set version for append function
+            CURRENT_VERSION="$version"
             
             # Now append to the main changelog file
             append_to_changelog "$temp_release_file" "$output_file"
@@ -287,19 +293,22 @@ append_to_changelog() {
     
     # If we have content to add
     if [[ -n "$new_content" ]]; then
+        # Extract version from the calling context (passed as global variable)
+        local version_from_context="${CURRENT_VERSION:-unknown}"
+        
         # Create temp file with new content first, then existing content
         {
             # Add the first few lines (header) from existing changelog
             head -n 4 "$changelog_file"
             echo ""
-            # Add new release content
-            echo "$new_content"
+            # Add git-cliff style release header
+            echo "## [$version_from_context] - $(date '+%Y-%m-%d')"
+            echo ""
+            # Add new release content (skip the title line from Python output)
+            echo "$new_content" | sed '1,/^Generated on/d'
             echo ""
             # Add remaining content from existing changelog (skip header)
-            tail -n +5 "$changelog_file" | sed '/^$/d' | head -c -1
-            if [[ $(tail -n +5 "$changelog_file" | wc -l) -gt 0 ]]; then
-                echo ""
-            fi
+            tail -n +5 "$changelog_file"
         } > "$temp_changelog"
         
         # Replace original with new content

@@ -1,6 +1,6 @@
 # Git Changelog Generator Makefile
 
-.PHONY: help changelog changelog-week changelog-month changelog-markdown clean install npm-pack npm-publish npm-test npm-prepare test test-api test-shell test-python test-bin release release-patch release-minor release-major tag-and-changelog parser
+.PHONY: help changelog changelog-week changelog-month changelog-markdown clean install npm-pack npm-publish npm-test npm-prepare test test-api test-shell test-python test-bin release release-patch release-minor release-major release-patch-push release-minor-push release-major-push tag-and-changelog parser
 
 # Default target
 help:
@@ -14,11 +14,12 @@ help:
 	@echo "  changelog-month   Generate changelog for last month"
 	@echo "  install           Make scripts executable"
 	@echo "  clean             Remove generated changelog files"
-	@echo "  release           Create tag with auto-increment (patch) and changelog"
-	@echo "  release-patch     Create patch release (X.Y.Z+1)"
-	@echo "  release-minor     Create minor release (X.Y+1.0)"
-	@echo "  release-major     Create major release (X+1.0.0)"
-	@echo "  tag-and-changelog Create custom tag and changelog (requires VERSION=x.y.z)"
+	@echo "  release           Create tag with auto-increment (patch) and append to CHANGELOG.md"
+	@echo "  release-patch     Create patch release (X.Y.Z+1) and update CHANGELOG.md"
+	@echo "  release-minor     Create minor release (X.Y+1.0) and update CHANGELOG.md"
+	@echo "  release-major     Create major release (X+1.0.0) and update CHANGELOG.md"
+	@echo "  release-*-push    Same as above but also push tag to remote"
+	@echo "  tag-and-changelog Create custom tag and append to CHANGELOG.md (requires VERSION=x.y.z)"
 	@echo "  parser            Open the web parser in your browser"
 	@echo "  npm-prepare       Prepare package for npm publishing"
 	@echo "  npm-pack          Create npm package locally"
@@ -61,8 +62,8 @@ changelog-month:
 
 # Clean generated files
 clean:
-	rm -f changelog_*.md CHANGELOG.md *.tgz
-	@echo "Cleaned generated changelog files"
+	rm -f changelog_*.md changelog_*.json *.tgz
+	@echo "Cleaned generated changelog files (CHANGELOG.md preserved)"
 
 # NPM Package targets
 npm-prepare:
@@ -114,12 +115,22 @@ test-bin:
 release: release-patch
 
 release-patch:
-	./git_tag_changelog.sh --auto-increment patch --push
+	./git_tag_changelog.sh --auto-increment patch
 
 release-minor:
-	./git_tag_changelog.sh --auto-increment minor --push
+	./git_tag_changelog.sh --auto-increment minor
 
 release-major:
+	./git_tag_changelog.sh --auto-increment major
+
+# Release targets with push to remote
+release-patch-push:
+	./git_tag_changelog.sh --auto-increment patch --push
+
+release-minor-push:
+	./git_tag_changelog.sh --auto-increment minor --push
+
+release-major-push:
 	./git_tag_changelog.sh --auto-increment major --push
 
 # Custom tag and changelog (requires VERSION=x.y.z)
@@ -127,7 +138,7 @@ tag-and-changelog:
 ifndef VERSION
 	$(error VERSION is not set. Usage: make tag-and-changelog VERSION=1.2.3)
 endif
-	./git_tag_changelog.sh $(VERSION)
+	./git_tag_changelog.sh $(VERSION) --force
 
 # Open the web parser in browser
 parser:

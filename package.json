@@ -1,6 +1,6 @@
 {
-  "name": "git-changelog-generator",
-  "version": "0.0.1",
+  "name": "git-changelog-tool",
+  "version": "0.1.0",
   "description": "A comprehensive collection of tools to generate, format, and visualize changelogs from git commit history",
   "main": "index.js",
   "bin": {
@@ -57,4 +57,4 @@
   ],
   "dependencies": {},
   "devDependencies": {}
-} 
+}
