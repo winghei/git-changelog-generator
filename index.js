@@ -229,13 +229,13 @@ class GitChangelogGenerator {
    * @param {Object} options - Configuration options
    * @param {string} [options.message] - Tag message (default: "Release VERSION")
    * @param {string} [options.prefix="v"] - Tag prefix
-   * @param {string} [options.format="markdown"] - Changelog format
+   * @param {string} [options.format="markdown"] - Changelog format (always markdown)
    * @param {string} [options.output] - Changelog output file
    * @param {boolean} [options.dryRun=false] - Show what would be done without executing
    * @param {boolean} [options.force=false] - Force tag creation (overwrite existing)
    * @param {boolean} [options.annotated=true] - Create annotated tag
    * @param {boolean} [options.push=false] - Push tag to origin
-   * @param {boolean} [options.usePython=false] - Use Python script for changelog
+   * @param {boolean} [options.usePython=true] - Use Python script for changelog (always true)
    * @param {boolean} [options.sinceLastTag=true] - Generate changelog since last tag
    * @returns {Promise<Object>} Result object with tag and changelog info
    */
@@ -249,7 +249,6 @@ class GitChangelogGenerator {
       force = false,
       annotated = true,
       push = false,
-      usePython = false,
       sinceLastTag = true,
       since,
       until,
@@ -271,9 +270,7 @@ class GitChangelogGenerator {
     if (prefix !== 'v') {
       args.push('--prefix', prefix);
     }
-    if (format !== 'markdown') {
-      args.push('--format', format);
-    }
+    // Format is always markdown, no need to pass it
     if (output) {
       args.push('--output', output);
     }
@@ -289,9 +286,7 @@ class GitChangelogGenerator {
     if (push) {
       args.push('--push');
     }
-    if (usePython) {
-      args.push('--python');
-    }
+    // Python is now the default, no --python flag needed
     if (sinceLastTag) {
       args.push('--since-last-tag');
     }
@@ -309,7 +304,7 @@ class GitChangelogGenerator {
       const result = await this._executeCommand('bash', [tagScript, ...args]);
       
       const tagName = `${prefix}${version}`;
-      const changelogFile = output || `CHANGELOG-${version}.${format === 'markdown' ? 'md' : format === 'json' ? 'json' : 'txt'}`;
+      const changelogFile = output || `CHANGELOG.md`;
       
       return {
         success: true,
@@ -351,7 +346,6 @@ class GitChangelogGenerator {
       force = false,
       annotated = true,
       push = false,
-      usePython = false,
       sinceLastTag = true,
       since,
       until,
@@ -364,9 +358,7 @@ class GitChangelogGenerator {
     if (prefix !== 'v') {
       args.push('--prefix', prefix);
     }
-    if (format !== 'markdown') {
-      args.push('--format', format);
-    }
+    // Format is always markdown, no need to pass it
     if (output) {
       args.push('--output', output);
     }
@@ -382,9 +374,7 @@ class GitChangelogGenerator {
     if (push) {
       args.push('--push');
     }
-    if (usePython) {
-      args.push('--python');
-    }
+    // Python is now the default, no --python flag needed
     if (sinceLastTag) {
       args.push('--since-last-tag');
     }
@@ -405,7 +395,7 @@ class GitChangelogGenerator {
       const versionMatch = result.stderr.match(/Version: (\d+\.\d+\.\d+)/);
       const version = versionMatch ? versionMatch[1] : 'unknown';
       const tagName = `${prefix}${version}`;
-      const changelogFile = output || `CHANGELOG-${version}.${format === 'markdown' ? 'md' : format === 'json' ? 'json' : 'txt'}`;
+      const changelogFile = output || `CHANGELOG.md`;
       
       return {
         success: true,

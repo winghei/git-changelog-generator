@@ -20,7 +20,7 @@ DRY_RUN=false
 FORCE=false
 ANNOTATED=true
 PUSH_TAG=false
-USE_PYTHON=false
+USE_PYTHON=true
 SINCE_LAST_TAG=true
 CONVENTIONAL_COMMITS=true
 CHANGELOG_ARGS=()
@@ -36,7 +36,8 @@ USAGE:
     $0 [OPTIONS] [VERSION]
 
 DESCRIPTION:
-    Creates git tags and generates changelogs for releases. Can automatically
+    Creates git tags and generates changelogs for releases. Appends new releases 
+    to CHANGELOG.md in git-cliff format (most recent first). Can automatically
     increment versions, generate changelogs since last tag, and push to remote.
 
 POSITIONAL ARGUMENTS:
@@ -47,15 +48,15 @@ OPTIONS:
     -h, --help           Show this help message
     -m, --message MSG    Tag message (default: "Release VERSION")
     -p, --prefix PREFIX  Tag prefix (default: "v")
-    -f, --format FORMAT  Changelog format: markdown, json, simple (default: markdown)
-    -o, --output FILE    Changelog output file (default: CHANGELOG-VERSION.md)
+
+    -o, --output FILE    Changelog output file (default: CHANGELOG.md)
     --auto-increment TYPE Auto-increment version: major, minor, patch
     --since-last-tag     Generate changelog since last tag (default: true)
     --dry-run           Show what would be done without executing
     --force             Force tag creation (overwrite existing)
     --lightweight       Create lightweight tag instead of annotated
     --push              Push tag to origin after creation
-    --python            Use Python script for changelog generation
+
     --no-conventional   Disable conventional commit parsing
     
 EXAMPLES:
@@ -68,14 +69,14 @@ EXAMPLES:
     # Create tag with custom message and push
     $0 2.0.0 --message "Major release with breaking changes" --push
     
-    # Generate changelog in JSON format
-    $0 1.5.0 --format json --output release-1.5.0.json
+    # Generate changelog and append to CHANGELOG.md
+    $0 1.5.0
     
     # Dry run to see what would happen
     $0 --auto-increment minor --dry-run
     
-    # Create lightweight tag and use Python script
-    $0 1.1.0 --lightweight --python
+    # Create lightweight tag
+    $0 1.1.0 --lightweight
     
     # Generate changelog since specific date instead of last tag
     $0 1.3.0 --no-since-last-tag --since "2024-01-01"
@@ -84,9 +85,10 @@ WORKFLOW:
     1. Validates git repository and working tree
     2. Determines version (provided or auto-incremented)
     3. Generates changelog since last tag or specified date
-    4. Creates git tag (annotated or lightweight)
-    5. Optionally pushes tag to remote
-    6. Updates package.json version if present
+    4. Appends new release section to CHANGELOG.md (most recent first)
+    5. Creates git tag (annotated or lightweight)
+    6. Optionally pushes tag to remote
+    7. Updates package.json version if present
 
 EOF
 }
@@ -211,6 +213,9 @@ generate_changelog() {
     local version="$1"
     local output_file="$2"
     
+    # Create temporary file for new release section
+    local temp_release_file=$(mktemp)
+    
     # Determine changelog range
     local changelog_args=()
     
@@ -224,30 +229,85 @@ generate_changelog() {
         fi
     fi
     
-    # Add format and output
+    # Add format and output to temp file
     changelog_args+=("--format" "$CHANGELOG_FORMAT")
-    if [[ -n "$output_file" ]]; then
-        changelog_args+=("--output" "$output_file")
-    fi
+    changelog_args+=("--output" "$temp_release_file")
     
-    # Add title
-    changelog_args+=("--title" "Release $version")
+    # Add title for this release
+    changelog_args+=("--title" "## [$version] - $(date '+%Y-%m-%d')")
     
-    # Generate changelog
+    # Generate changelog for this release only
     if [[ "$USE_PYTHON" == "true" ]]; then
         log "Generating changelog using Python script..."
         if [[ "$DRY_RUN" == "false" ]]; then
             python3 "$GIT_CHANGELOG_PY" "${changelog_args[@]}"
+            
+            # Now append to the main changelog file
+            append_to_changelog "$temp_release_file" "$output_file"
         else
             log_info "Would run: python3 $GIT_CHANGELOG_PY ${changelog_args[*]}"
+            log_info "Would append new release to: $output_file"
         fi
     else
         log "Generating changelog using shell script..."
         if [[ "$DRY_RUN" == "false" ]]; then
             bash "$GIT_CHANGELOG_SH" "${changelog_args[@]}"
+            
+            # Now append to the main changelog file
+            append_to_changelog "$temp_release_file" "$output_file"
         else
             log_info "Would run: bash $GIT_CHANGELOG_SH ${changelog_args[*]}"
+            log_info "Would append new release to: $output_file"
         fi
+    fi
+    
+    # Clean up temp file
+    rm -f "$temp_release_file"
+}
+
+# Function to append new release to changelog
+append_to_changelog() {
+    local new_release_file="$1"
+    local changelog_file="$2"
+    local temp_changelog=$(mktemp)
+    
+    # Create header if changelog doesn't exist
+    if [[ ! -f "$changelog_file" ]]; then
+        echo "# Changelog" > "$changelog_file"
+        echo "" >> "$changelog_file"
+        echo "All notable changes to this project will be documented in this file." >> "$changelog_file"
+        echo "" >> "$changelog_file"
+    fi
+    
+    # Read the new release content (skip the title line if it exists)
+    local new_content=""
+    if [[ -f "$new_release_file" ]]; then
+        new_content=$(cat "$new_release_file")
+    fi
+    
+    # If we have content to add
+    if [[ -n "$new_content" ]]; then
+        # Create temp file with new content first, then existing content
+        {
+            # Add the first few lines (header) from existing changelog
+            head -n 4 "$changelog_file"
+            echo ""
+            # Add new release content
+            echo "$new_content"
+            echo ""
+            # Add remaining content from existing changelog (skip header)
+            tail -n +5 "$changelog_file" | sed '/^$/d' | head -c -1
+            if [[ $(tail -n +5 "$changelog_file" | wc -l) -gt 0 ]]; then
+                echo ""
+            fi
+        } > "$temp_changelog"
+        
+        # Replace original with new content
+        mv "$temp_changelog" "$changelog_file"
+        log_success "Added release to $changelog_file"
+    else
+        rm -f "$temp_changelog"
+        log_info "No changelog content generated"
     fi
 }
 
@@ -347,10 +407,6 @@ while [[ $# -gt 0 ]]; do
             TAG_PREFIX="$2"
             shift 2
             ;;
-        -f|--format)
-            CHANGELOG_FORMAT="$2"
-            shift 2
-            ;;
         -o|--output)
             CHANGELOG_FILE="$2"
             shift 2
@@ -377,10 +433,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --push)
             PUSH_TAG=true
-            shift
-            ;;
-        --python)
-            USE_PYTHON=true
             shift
             ;;
         --no-conventional)
@@ -438,17 +490,7 @@ main() {
     
     # Set default changelog file if not specified
     if [[ -z "$CHANGELOG_FILE" ]]; then
-        case "$CHANGELOG_FORMAT" in
-            "markdown")
-                CHANGELOG_FILE="CHANGELOG-${version}.md"
-                ;;
-            "json")
-                CHANGELOG_FILE="changelog-${version}.json"
-                ;;
-            "simple")
-                CHANGELOG_FILE="changelog-${version}.txt"
-                ;;
-        esac
+        CHANGELOG_FILE="CHANGELOG.md"
     fi
     
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -457,7 +499,7 @@ main() {
     
     log_info "Version: $version"
     log_info "Tag: $tag_name"
-    log_info "Changelog: $CHANGELOG_FILE ($CHANGELOG_FORMAT format)"
+    log_info "Changelog: $CHANGELOG_FILE (markdown format)"
     
     # Generate changelog
     generate_changelog "$version" "$CHANGELOG_FILE"
