@@ -1,0 +1,2974 @@
+<!DOCTYPE html>
+<html lang="en">
+     <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Changelog JSON Parser</title>
+          <style>
+               body {
+                    font-family: Arial, sans-serif;
+                    font-size: 14px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #f5f5f5;
+               }
+
+               .container {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 20px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+               }
+
+               .main-layout {
+                    display: flex;
+                    gap: 20px;
+                    align-items: flex-start;
+               }
+
+               .content-area {
+                    flex: 1;
+                    min-width: 0;
+               }
+
+               .sidebar {
+                    width: 300px;
+                    font-size: 14px;
+                    flex-shrink: 0;
+               }
+
+               h1 {
+                    color: #333;
+                    text-align: center;
+                    margin-bottom: 30px;
+               }
+
+               .file-input-section {
+                    border: 2px dashed #ccc;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    padding: 40px;
+                    text-align: center;
+                    margin-bottom: 30px;
+                    transition: all 0.3s ease;
+                    position: relative;
+               }
+
+               .file-input-section.dragover {
+                    border-color: #007bff;
+                    background-color: #f8f9fa;
+               }
+
+               .file-input-section.collapsed {
+                    padding: 15px 40px;
+                    border-style: solid;
+                    background-color: #f8f9fa;
+               }
+
+               .file-input-section.collapsed .file-input-content {
+                    display: none;
+               }
+
+               .file-input-section.collapsed .file-input-collapsed {
+                    display: block;
+               }
+
+               .file-input-collapsed {
+                    display: none;
+                    font-size: 14px;
+                    color: #6c757d;
+               }
+
+               .loaded-file-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #f8f9fa;
+                    border: 1px solid #e9ecef;
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    margin-bottom: 5px;
+                    font-size: 0.9em;
+               }
+
+               .loaded-file-info {
+                    flex: 1;
+                    margin-right: 10px;
+               }
+
+               .loaded-file-name {
+                    font-weight: bold;
+                    color: #495057;
+               }
+
+               .loaded-file-details {
+                    font-size: 0.8em;
+                    color: #6c757d;
+                    margin-top: 2px;
+               }
+
+               .remove-file-btn {
+                    background: #dc3545;
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 0.8em;
+                    flex-shrink: 0;
+               }
+
+               .remove-file-btn:hover {
+                    background: #c82333;
+               }
+
+               .collapse-toggle {
+                    position: absolute;
+                    top: 10px;
+                    right: 15px;
+                    background: none;
+                    border: none;
+                    font-size: 18px;
+                    cursor: pointer;
+                    color: #6c757d;
+                    padding: 5px;
+                    border-radius: 3px;
+                    transition: all 0.2s ease;
+               }
+
+               .collapse-toggle:hover {
+                    background-color: #e9ecef;
+                    color: #495057;
+               }
+
+               .file-input {
+                    margin: 10px;
+                    padding: 8px 16px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    cursor: pointer;
+               }
+
+               .changelog-info {
+                    background: #e9ecef;
+                    padding: 15px;
+                    border-radius: 4px;
+                    margin-bottom: 20px;
+               }
+
+               .component-section {
+                    margin-bottom: 30px;
+               }
+
+               .component-title {
+                    background: #007bff;
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 4px 4px 0 0;
+                    font-weight: bold;
+                    font-size: 1.1em;
+               }
+
+               .component-title.type-fix {
+                    background: #dc3545;
+               }
+
+               .component-title.type-feat {
+                    background: #28a745;
+               }
+
+               .component-title.type-style {
+                    background: #6f42c1;
+               }
+
+               .component-title.type-refactor {
+                    background: #fd7e14;
+               }
+
+               .component-title.type-other {
+                    background: #6c757d;
+               }
+
+               .commits-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    border: 1px solid #ddd;
+                    border-top: none;
+                    table-layout: fixed;
+               }
+
+               .commits-table th,
+               .commits-table td {
+                    padding: 12px;
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+               }
+
+               /* Fixed column widths - default (component grouping) */
+               .commits-table th:nth-child(1),
+               .commits-table td:nth-child(1) {
+                    width: 120px; /* Type/Component column */
+               }
+
+               .commits-table th:nth-child(2),
+               .commits-table td:nth-child(2) {
+                    width: auto; /* Commit message - takes remaining space */
+                    min-width: 200px;
+               }
+
+               .commits-table th:nth-child(3),
+               .commits-table td:nth-child(3) {
+                    width: 100px; /* Hash column */
+               }
+
+               .commits-table th:nth-child(4),
+               .commits-table td:nth-child(4) {
+                    width: 180px; /* Date column */
+               }
+
+               .commits-table th:nth-child(5),
+               .commits-table td:nth-child(5) {
+                    width: 150px; /* Author column */
+               }
+
+               .commits-table th:nth-child(6),
+               .commits-table td:nth-child(6) {
+                    width: 200px; /* Branches column */
+               }
+
+               /* Column widths when grouping by type (with bugs column) */
+               .commits-table.type-grouping th:nth-child(1),
+               .commits-table.type-grouping td:nth-child(1) {
+                    width: 120px; /* Component column */
+               }
+
+               .commits-table.type-grouping th:nth-child(2),
+               .commits-table.type-grouping td:nth-child(2) {
+                    width: 150px; /* Bugs column */
+               }
+
+               .commits-table.type-grouping th:nth-child(3),
+               .commits-table.type-grouping td:nth-child(3) {
+                    width: auto; /* Commit message - takes remaining space */
+                    min-width: 200px;
+               }
+
+               .commits-table.type-grouping th:nth-child(4),
+               .commits-table.type-grouping td:nth-child(4) {
+                    width: 100px; /* Hash column */
+               }
+
+               .commits-table.type-grouping th:nth-child(5),
+               .commits-table.type-grouping td:nth-child(5) {
+                    width: 180px; /* Date column */
+               }
+
+               .commits-table.type-grouping th:nth-child(6),
+               .commits-table.type-grouping td:nth-child(6) {
+                    width: 150px; /* Author column */
+               }
+
+               .commits-table.type-grouping th:nth-child(7),
+               .commits-table.type-grouping td:nth-child(7) {
+                    width: 200px; /* Branches column */
+               }
+
+               /* Text overflow handling for specific columns - default (component grouping) */
+               .commits-table td:nth-child(5) {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+               }
+
+               .commits-table td:nth-child(6) {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    line-clamp: 2;
+                    -webkit-line-clamp: 2;
+                    text-overflow: ellipsis;
+               }
+
+               /* Commit message column styling - default */
+               .commits-table td:nth-child(2) {
+                    line-height: 1.4;
+               }
+
+               /* Text overflow handling when grouping by type */
+               .commits-table.type-grouping td:nth-child(6) {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+               }
+
+               .commits-table.type-grouping td:nth-child(7) {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    line-clamp: 2;
+                    -webkit-line-clamp: 2;
+                    text-overflow: ellipsis;
+               }
+
+               /* Commit message column styling when grouping by type */
+               .commits-table.type-grouping td:nth-child(3) {
+                    line-height: 1.4;
+               }
+
+               /* Bugs column styling */
+               .commits-table.type-grouping td:nth-child(2) {
+                    line-height: 1.2;
+                    overflow: hidden;
+               }
+
+               .commits-table th {
+                    background-color: #f8f9fa;
+                    font-weight: bold;
+               }
+
+               .commits-table tr:hover {
+                    background-color: #f8f9fa;
+               }
+
+               .commit-type {
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.85em;
+                    font-weight: bold;
+                    text-transform: uppercase;
+               }
+
+               .commit-type.fix {
+                    background-color: #dc3545;
+                    color: white;
+               }
+
+               .commit-type.feat {
+                    background-color: #28a745;
+                    color: white;
+               }
+
+               .commit-type.style {
+                    background-color: #6f42c1;
+                    color: white;
+               }
+
+               .commit-type.refactor {
+                    background-color: #fd7e14;
+                    color: white;
+               }
+
+               .commit-type.other {
+                    background-color: #6c757d;
+                    color: white;
+               }
+
+               .commit-type.bugs {
+                    background-color: #e74c3c;
+                    color: white;
+               }
+
+               .bug-tag {
+                    display: inline-block;
+                    background-color: #f8f9fa;
+                    color: #495057;
+                    border: 1px solid #dee2e6;
+                    border-radius: 3px;
+                    padding: 2px 6px;
+                    font-size: 0.7em;
+                    margin-right: 4px;
+                    margin-bottom: 2px;
+               }
+
+               .editable {
+                    cursor: pointer;
+                    position: relative;
+               }
+
+               .editable:hover {
+                    background-color: #f8f9fa;
+                    border-radius: 3px;
+               }
+
+               .editable-input {
+                    width: 100%;
+                    border: 2px solid #007bff;
+                    border-radius: 3px;
+                    padding: 4px;
+                    font-size: inherit;
+                    font-family: inherit;
+               }
+
+               .editable-textarea {
+                    width: 100%;
+                    min-height: 40px;
+                    border: 2px solid #007bff;
+                    border-radius: 3px;
+                    padding: 4px;
+                    font-size: inherit;
+                    font-family: inherit;
+                    resize: vertical;
+               }
+
+               .edit-buttons {
+                    margin-top: 5px;
+               }
+
+               .edit-btn {
+                    background: #007bff;
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 0.8em;
+                    margin-right: 5px;
+               }
+
+               .edit-btn:hover {
+                    background: #0056b3;
+               }
+
+               .edit-btn.cancel {
+                    background: #6c757d;
+               }
+
+               .edit-btn.cancel:hover {
+                    background: #545b62;
+               }
+
+               .add-bug-btn {
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 0.7em;
+                    margin-left: 5px;
+               }
+
+               .add-bug-btn:hover {
+                    background: #1e7e34;
+               }
+
+               .bug-tag.editable {
+                    background-color: #e9ecef;
+                    cursor: pointer;
+               }
+
+               .bug-tag.editable:hover {
+                    background-color: #dee2e6;
+               }
+
+               .bug-tag.readonly {
+                    background-color: #e9ecef;
+                    color: #6c757d;
+                    border-color: #ced4da;
+                    opacity: 0.7;
+               }
+
+               .additional-commit-log {
+                    margin-top: 8px;
+                    padding: 6px 8px;
+                    background-color: #e3f2fd;
+                    border-left: 3px solid #2196f3;
+                    border-radius: 3px;
+                    font-size: 0.9em;
+                    font-style: italic;
+               }
+
+               .additional-commit-log strong {
+                    color: #1976d2;
+                    font-weight: bold;
+               }
+
+               .commit-log-container {
+                    position: relative;
+               }
+
+               .commit-log-preview {
+                    max-height: 4.2em; /* Roughly 3 lines */
+                    overflow: hidden;
+                    line-height: 1.4;
+                    position: relative;
+               }
+
+               .commit-log-preview.has-overflow::after {
+                    content: "";
+                    position: absolute;
+                    bottom: 0;
+                    right: 0;
+                    width: 50px;
+                    height: 1.4em;
+                    background: linear-gradient(to right, transparent, white 50%);
+                    pointer-events: none;
+               }
+
+               .commit-log-full {
+                    line-height: 1.4;
+               }
+
+               .commit-log-toggle {
+                    display: inline-block;
+                    margin-top: 5px;
+                    color: #007bff;
+                    cursor: pointer;
+                    font-size: 0.9em;
+                    text-decoration: underline;
+                    user-select: none;
+               }
+
+               .commit-log-toggle:hover {
+                    color: #0056b3;
+               }
+
+               .commit-body {
+                    margin-top: 8px;
+                    padding-top: 8px;
+                    border-top: 1px solid #e9ecef;
+                    color: #6c757d;
+                    font-size: 0.95em;
+                    line-height: 1.4;
+               }
+
+               .commit-body-container {
+                    position: relative;
+               }
+
+               .commit-body-preview {
+                    max-height: 3.6em; /* Roughly 3 lines for body content */
+                    overflow: hidden;
+                    position: relative;
+               }
+
+               .commit-body-preview.has-overflow::after {
+                    content: "";
+                    position: absolute;
+                    bottom: 0;
+                    right: 0;
+                    width: 50px;
+                    height: 1.4em;
+                    background: linear-gradient(to right, transparent, white 50%);
+                    pointer-events: none;
+               }
+
+               .commit-body-full {
+                    /* No height restrictions for full view */
+               }
+
+               .original-commit-log {
+                    padding: 6px 8px;
+                    background-color: #f8f9fa;
+                    border-left: 3px solid #6c757d;
+                    border-radius: 3px;
+                    font-size: 0.9em;
+                    margin-bottom: 8px;
+               }
+
+               .original-commit-log strong {
+                    color: #495057;
+                    font-weight: bold;
+               }
+
+               .remove-bug {
+                    margin-left: 4px;
+                    color: #dc3545;
+                    cursor: pointer;
+                    font-weight: bold;
+               }
+
+               .remove-bug:hover {
+                    color: #c82333;
+               }
+
+               .commit-hash {
+                    font-family: monospace;
+                    background: #f8f9fa;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-size: 0.9em;
+                    display: block;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+               }
+
+               .error {
+                    color: #dc3545;
+                    background: #f8d7da;
+                    padding: 10px;
+                    border-radius: 4px;
+                    margin: 10px 0;
+               }
+
+               .no-data {
+                    text-align: center;
+                    color: #6c757d;
+                    font-style: italic;
+                    padding: 40px;
+               }
+
+               .filters-section {
+                    background: #f8f9fa;
+                    border: 1px solid #e9ecef;
+                    border-radius: 8px;
+                    padding: 20px;
+                    display: none;
+                    position: sticky;
+                    top: 20px;
+
+                    overflow-y: auto;
+               }
+
+               .filters-section.show {
+                    display: block;
+               }
+
+               .filters-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 15px;
+               }
+
+               .filters-header h4 {
+                    margin: 0;
+                    color: #495057;
+               }
+
+               .clear-filters-btn {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9em;
+               }
+
+               .clear-filters-btn:hover {
+                    background: #5a6268;
+               }
+
+               .layout-section {
+                    border-bottom: 1px solid #dee2e6;
+                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+               }
+
+               .layout-section h5 {
+                    margin: 0 0 10px 0;
+                    color: #495057;
+                    font-size: 0.9em;
+               }
+
+               .layout-options {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+               }
+
+               .layout-option {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+               }
+
+               .layout-option input[type="radio"] {
+                    margin: 0;
+               }
+
+               .layout-option label {
+                    margin: 0;
+                    font-weight: normal;
+                    cursor: pointer;
+                    font-size: 0.9em;
+               }
+
+               .search-section {
+                    border-bottom: 1px solid #dee2e6;
+                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+               }
+
+               .search-section h5 {
+                    margin: 0 0 10px 0;
+                    color: #495057;
+                    font-size: 0.9em;
+               }
+
+               .search-input {
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 1px solid #ced4da;
+                    border-radius: 4px;
+                    font-size: 0.9em;
+                    box-sizing: border-box;
+               }
+
+               .search-input:focus {
+                    outline: none;
+                    border-color: #007bff;
+                    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+               }
+
+               .search-clear {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    color: #6c757d;
+                    cursor: pointer;
+                    font-size: 1.2em;
+                    padding: 0;
+                    width: 20px;
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+               }
+
+               .search-container {
+                    position: relative;
+               }
+
+               .search-highlight {
+                    background-color: yellow;
+                    padding: 1px 2px;
+                    border-radius: 2px;
+               }
+
+               .filters-grid {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+               }
+
+               .filter-group {
+                    display: flex;
+                    flex-direction: column;
+               }
+
+               .filter-group label {
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                    color: #495057;
+               }
+
+               .filter-group select,
+               .filter-group input {
+                    padding: 8px;
+                    border: 1px solid #ced4da;
+
+                    font-size: 0.9em;
+               }
+
+               .filter-group select[multiple] {
+                    min-height: 80px;
+               }
+
+               .filter-container {
+                    border: 1px solid #ced4da;
+                    border-radius: 4px;
+                    background: white;
+                    font-size: 0.9em;
+               }
+
+               .filter-search {
+                    width: 100%;
+                    padding: 6px 8px;
+                    border: none;
+                    border-bottom: 1px solid #e9ecef;
+                    font-size: 0.85em;
+                    box-sizing: border-box;
+                    background: #f8f9fa;
+               }
+
+               .filter-search:focus {
+                    outline: none;
+                    background: white;
+                    border-bottom-color: #007bff;
+               }
+
+               .filter-search::placeholder {
+                    color: #6c757d;
+                    font-style: italic;
+               }
+
+               .filter-items {
+                    max-height: 160px;
+                    overflow-y: auto;
+                    padding: 8px;
+               }
+
+               .filter-item {
+                    display: flex;
+                    align-items: center;
+                    padding: 4px 0;
+                    cursor: pointer;
+                    border-radius: 3px;
+                    transition: background-color 0.2s;
+               }
+
+               .filter-item:hover {
+                    background-color: #f8f9fa;
+               }
+
+               .filter-item input[type="checkbox"] {
+                    margin-right: 8px;
+                    cursor: pointer;
+               }
+
+               .filter-item label {
+                    cursor: pointer;
+                    margin: 0;
+                    flex: 1;
+                    font-size: 0.9em;
+                    word-break: break-word;
+               }
+
+               /* Special styling for files filter */
+               #filesFilter .filter-item label {
+                    font-family: monospace;
+                    font-size: 0.85em;
+                    word-break: break-all;
+               }
+
+               .date-range-inputs {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+               }
+
+               .active-filters {
+                    margin-top: 15px;
+                    padding-top: 15px;
+                    border-top: 1px solid #dee2e6;
+               }
+
+               .active-filters h5 {
+                    margin: 0 0 10px 0;
+                    color: #495057;
+                    font-size: 0.9em;
+               }
+
+               .filter-tags {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+               }
+
+               .filter-tag {
+                    background: #007bff;
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 0.8em;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+               }
+
+               .filter-tag .remove {
+                    cursor: pointer;
+                    font-weight: bold;
+               }
+
+               .filter-tag .remove:hover {
+                    color: #ffcccb;
+               }
+
+               .results-summary {
+                    background: #e3f2fd;
+                    padding: 10px 15px;
+                    border-radius: 4px;
+                    margin-bottom: 20px;
+                    font-size: 0.9em;
+                    color: #1565c0;
+               }
+
+               /* Responsive design */
+               @media (max-width: 768px) {
+                    .main-layout {
+                         flex-direction: column;
+                    }
+
+                    .sidebar {
+                         width: 100%;
+                         order: -1;
+                    }
+
+                    .filters-section {
+                         position: static;
+                         max-height: none;
+                         margin-bottom: 20px;
+                    }
+
+                    .filters-grid {
+                         display: grid;
+                         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                         gap: 15px;
+                    }
+               }
+          </style>
+     </head>
+     <body>
+          <div class="container">
+               <h1>Changelog JSON Parser</h1>
+
+               <div class="file-input-section" id="dropZone">
+                    <button class="collapse-toggle" id="collapseToggle" title="Collapse file input" style="display: none">−</button>
+                    <div class="file-input-content">
+                         <p>Drag and drop JSON files here or select files:</p>
+                         <input type="file" id="fileInput" class="file-input" accept=".json" multiple />
+                         <p><small>Supports multiple changelog JSON files. Commits will be merged by hash.</small></p>
+
+                         <!-- Loaded Files List -->
+                         <div id="loadedFilesList" style="display: none; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px">
+                              <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 0.9em">Loaded Files:</h4>
+                              <div id="loadedFilesContainer"></div>
+                              <div style="margin-top: 10px; text-align: center">
+                                   <button id="resetDataBtn" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9em">Reset All Data</button>
+                              </div>
+                         </div>
+                    </div>
+                    <div class="file-input-collapsed">
+                         <span id="loadedFileName">No file loaded</span>
+                         •
+                         <button style="background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline" onclick="document.getElementById('fileInput').click()">Load new file</button>
+                    </div>
+               </div>
+
+               <div id="error" class="error" style="display: none"></div>
+
+               <div id="content" style="display: none">
+                    <div id="changelogInfo" class="changelog-info"></div>
+
+                    <div class="main-layout">
+                         <div class="content-area">
+                              <div id="resultsSummary" class="results-summary" style="display: none"></div>
+                              <div id="componentsContainer" style="height: 100%; overflow-y: auto"></div>
+                         </div>
+
+                         <div class="sidebar">
+                              <div id="filtersSection" class="filters-section">
+                                   <div class="filters-header">
+                                        <h4>Controls</h4>
+                                        <div>
+                                             <div style="display: flex; flex-direction: column; gap: 5px; margin-right: 10px">
+                                                  <button id="exportJsonBtn" class="clear-filters-btn" style="background: #28a745">Export All</button>
+                                                  <button id="exportModificationsBtn" class="clear-filters-btn" style="background: #17a2b8; font-size: 0.8em">Export Modifications Only</button>
+                                             </div>
+                                        </div>
+                                   </div>
+
+                                   <div class="search-section">
+                                        <h5>Search:</h5>
+                                        <div class="search-container">
+                                             <input type="text" id="searchInput" class="search-input" placeholder="Search commits, authors, components..." />
+                                             <button id="searchClear" class="search-clear" style="display: none" title="Clear search">×</button>
+                                        </div>
+                                   </div>
+
+                                   <div class="layout-section">
+                                        <h5>Group By:</h5>
+                                        <div class="layout-options">
+                                             <div class="layout-option">
+                                                  <input type="radio" id="groupByComponent" name="groupBy" value="component" checked />
+                                                  <label for="groupByComponent">Component</label>
+                                             </div>
+                                             <div class="layout-option">
+                                                  <input type="radio" id="groupByType" name="groupBy" value="type" />
+                                                  <label for="groupByType">Commit Type</label>
+                                             </div>
+                                        </div>
+                                   </div>
+
+                                   <div class="filters-grid">
+                                        <div class="filter-group">
+                                             <label>Filters:</label>
+                                        </div>
+                                        <div id="activeFilters" class="active-filters" style="display: none">
+                                             <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center">
+                                                  <h5>Active Filters:</h5>
+                                                  <button id="clearFiltersBtn" class="clear-filters-btn">Clear All</button>
+                                             </div>
+
+                                             <div id="filterTags" class="filter-tags"></div>
+                                        </div>
+                                        <div class="filter-group">
+                                             <label>Date Range:</label>
+                                             <div class="date-range-inputs">
+                                                  <input type="date" id="dateFromFilter" placeholder="From" />
+                                                  <input type="date" id="dateToFilter" placeholder="To" />
+                                             </div>
+                                        </div>
+                                        <div class="filter-group">
+                                             <label for="typeFilter">Commit Types:</label>
+                                             <div id="typeFilter" class="filter-container">
+                                                  <!-- Type checkboxes will be populated dynamically -->
+                                             </div>
+                                        </div>
+
+                                        <div class="filter-group">
+                                             <label for="authorFilter">Authors:</label>
+                                             <div id="authorFilter" class="filter-container">
+                                                  <!-- Author checkboxes will be populated dynamically -->
+                                             </div>
+                                        </div>
+
+                                        <div class="filter-group">
+                                             <label for="branchFilter">Include Branches:</label>
+                                             <div id="branchFilter" class="filter-container">
+                                                  <!-- Branch checkboxes will be populated dynamically -->
+                                             </div>
+                                        </div>
+
+                                        <div class="filter-group">
+                                             <label for="excludeBranchFilter">Exclude Branches:</label>
+                                             <div id="excludeBranchFilter" class="filter-container">
+                                                  <!-- Branch checkboxes will be populated dynamically -->
+                                             </div>
+                                        </div>
+
+                                        <div class="filter-group">
+                                             <label for="bugsFilter">Bug Types:</label>
+                                             <div id="bugsFilter" class="filter-container">
+                                                  <!-- Bug type checkboxes will be populated dynamically -->
+                                             </div>
+                                        </div>
+
+                                        <div class="filter-group">
+                                             <label for="filesFilter">Source Files:</label>
+                                             <div id="filesFilter" class="filter-container">
+                                                  <!-- File checkboxes will be populated dynamically -->
+                                             </div>
+                                        </div>
+                                   </div>
+                              </div>
+                         </div>
+                    </div>
+               </div>
+          </div>
+
+          <script>
+               class ChangelogParser {
+                    constructor() {
+                         this.fileInput = document.getElementById("fileInput");
+                         this.dropZone = document.getElementById("dropZone");
+                         this.errorDiv = document.getElementById("error");
+                         this.contentDiv = document.getElementById("content");
+                         this.changelogInfoDiv = document.getElementById("changelogInfo");
+                         this.componentsContainer = document.getElementById("componentsContainer");
+
+                         // Filter elements
+                         this.filtersSection = document.getElementById("filtersSection");
+                         this.typeFilter = document.getElementById("typeFilter");
+                         this.authorFilter = document.getElementById("authorFilter");
+                         this.branchFilter = document.getElementById("branchFilter");
+                         this.excludeBranchFilter = document.getElementById("excludeBranchFilter");
+                         this.bugsFilter = document.getElementById("bugsFilter");
+                         this.filesFilter = document.getElementById("filesFilter");
+                         this.dateFromFilter = document.getElementById("dateFromFilter");
+                         this.dateToFilter = document.getElementById("dateToFilter");
+                         this.clearFiltersBtn = document.getElementById("clearFiltersBtn");
+                         this.exportJsonBtn = document.getElementById("exportJsonBtn");
+                         this.exportModificationsBtn = document.getElementById("exportModificationsBtn");
+                         this.resetDataBtn = document.getElementById("resetDataBtn");
+                         this.activeFiltersDiv = document.getElementById("activeFilters");
+                         this.filterTagsDiv = document.getElementById("filterTags");
+                         this.resultsSummaryDiv = document.getElementById("resultsSummary");
+
+                         // Layout elements
+                         this.groupByComponent = document.getElementById("groupByComponent");
+                         this.groupByType = document.getElementById("groupByType");
+
+                         // Search elements
+                         this.searchInput = document.getElementById("searchInput");
+                         this.searchClear = document.getElementById("searchClear");
+
+                         // Collapse elements
+                         this.collapseToggle = document.getElementById("collapseToggle");
+                         this.loadedFileName = document.getElementById("loadedFileName");
+
+                         // Loaded files elements
+                         this.loadedFilesList = document.getElementById("loadedFilesList");
+                         this.loadedFilesContainer = document.getElementById("loadedFilesContainer");
+
+                         // Data storage
+                         this.originalData = null;
+                         this.allCommits = [];
+                         this.loadedFiles = [];
+                         this.commitMap = new Map(); // For merging commits by hash
+                         this.currentFilters = {
+                              types: [],
+                              authors: [],
+                              branches: [],
+                              excludeBranches: [],
+                              bugs: [],
+                              files: [],
+                              dateFrom: null,
+                              dateTo: null,
+                         };
+                         this.currentGroupBy = "component";
+                         this.currentSearchTerm = "";
+
+                         this.initializeEventListeners();
+                    }
+
+                    initializeEventListeners() {
+                         // File input change
+                         this.fileInput.addEventListener("change", (e) => {
+                              if (e.target.files.length > 0) {
+                                   this.handleMultipleFiles(Array.from(e.target.files));
+                              }
+                         });
+
+                         // Drag and drop events
+                         this.dropZone.addEventListener("dragover", (e) => {
+                              e.preventDefault();
+                              this.dropZone.classList.add("dragover");
+                         });
+
+                         this.dropZone.addEventListener("dragleave", (e) => {
+                              e.preventDefault();
+                              this.dropZone.classList.remove("dragover");
+                         });
+
+                         this.dropZone.addEventListener("drop", (e) => {
+                              e.preventDefault();
+                              this.dropZone.classList.remove("dragover");
+
+                              const files = Array.from(e.dataTransfer.files);
+                              if (files.length > 0) {
+                                   this.handleMultipleFiles(files);
+                              }
+                         });
+
+                         // Filter event listeners are now handled in populateFilter method
+                         this.dateFromFilter.addEventListener("change", () => this.handleFilterChange());
+                         this.dateToFilter.addEventListener("change", () => this.handleFilterChange());
+                         this.clearFiltersBtn.addEventListener("click", () => this.clearAllFilters());
+                         this.exportJsonBtn.addEventListener("click", () => this.exportModifiedJson());
+                         this.exportModificationsBtn.addEventListener("click", () => this.exportModificationsOnly());
+
+                         // Layout event listeners
+                         this.groupByComponent.addEventListener("change", () => this.handleLayoutChange());
+                         this.groupByType.addEventListener("change", () => this.handleLayoutChange());
+
+                         // Search event listeners
+                         this.searchInput.addEventListener("input", () => this.handleSearchChange());
+                         this.searchInput.addEventListener("keyup", (e) => {
+                              if (e.key === "Escape") {
+                                   this.clearSearch();
+                              }
+                         });
+                         this.searchClear.addEventListener("click", () => this.clearSearch());
+
+                         // Collapse event listener
+                         this.collapseToggle.addEventListener("click", () => this.toggleFileInputCollapse());
+                    }
+
+                    handleMultipleFiles(files) {
+                         // Don't reset data - add to existing data instead
+                         // this.loadedFiles = []; // Keep existing files
+                         // this.commitMap.clear(); // Keep existing commits
+                         // this.allCommits = []; // Keep existing commits
+
+                         // Filter for JSON files only
+                         const jsonFiles = files.filter((file) => file.name.toLowerCase().endsWith(".json"));
+
+                         if (jsonFiles.length === 0) {
+                              this.showError("Please select at least one JSON file.");
+                              return;
+                         }
+
+                         if (jsonFiles.length !== files.length) {
+                              console.warn(`${files.length - jsonFiles.length} non-JSON files were ignored.`);
+                         }
+
+                         this.processFiles(jsonFiles);
+                    }
+
+                    async processFiles(files) {
+                         let processedCount = 0;
+                         let modificationsCount = 0;
+                         let hasErrors = false;
+                         const errors = [];
+
+                         for (const file of files) {
+                              try {
+                                   const fileData = await this.readFile(file);
+                                   const jsonData = JSON.parse(fileData);
+
+                                   if (jsonData.type === "changelog_modifications") {
+                                        // This is a modifications file
+                                        this.storeModificationsFile(jsonData, file.name);
+                                        modificationsCount++;
+                                   } else {
+                                        // This is a regular changelog file
+                                        this.mergeFileData(jsonData, file.name);
+                                        processedCount++;
+                                   }
+                              } catch (error) {
+                                   hasErrors = true;
+                                   errors.push(`${file.name}: ${error.message}`);
+                              }
+                         }
+
+                         // Allow loading of modifications files even without changelog files
+                         if (processedCount === 0 && modificationsCount === 0) {
+                              this.showError(`No valid files could be processed:\n${errors.join("\n")}`);
+                              return;
+                         }
+
+                         if (hasErrors) {
+                              console.warn("Some files had errors:", errors);
+                         }
+
+                         // Only finalize data if we have actual changelog data
+                         if (processedCount > 0) {
+                              this.finalizeData();
+                         } else if (modificationsCount > 0) {
+                              // Check if we already have changelog data and just added modifications
+                              if (this.allCommits && this.allCommits.length > 0) {
+                                   // We already have data, just update the loaded files list
+                                   this.updateLoadedFilesList();
+                              } else {
+                                   // Only modifications loaded - update the UI to show pending modifications
+                                   this.updateLoadedFilesList();
+                                   this.showPendingModificationsInfo();
+                              }
+                         }
+
+                         // Show loading feedback
+                         const loadingMsg = document.createElement("div");
+                         loadingMsg.style.cssText = `
+                              position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                              background: #28a745; color: white; padding: 10px 20px;
+                              border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                         `;
+
+                         if (processedCount > 0 && modificationsCount > 0) {
+                              loadingMsg.textContent = `✅ Added ${processedCount} changelog files + ${modificationsCount} modification files (auto-applying...)`;
+                         } else if (processedCount > 0) {
+                              const hasPending = this.pendingModifications && this.pendingModifications.modifications && this.pendingModifications.modifications.length > 0;
+                              if (hasPending) {
+                                   loadingMsg.textContent = `✅ Added ${processedCount} changelog files (auto-applying pending modifications...)`;
+                              } else {
+                                   loadingMsg.textContent = `✅ Added ${processedCount} changelog files`;
+                              }
+                         } else if (modificationsCount > 0) {
+                              // Check if we already have changelog data loaded
+                              if (this.allCommits && this.allCommits.length > 0) {
+                                   loadingMsg.textContent = `✅ Added ${modificationsCount} modification files (auto-applying...)`;
+                              } else {
+                                   loadingMsg.textContent = `✅ Added ${modificationsCount} modification files (waiting for changelog data)`;
+                              }
+                         }
+
+                         if (processedCount > 0 || modificationsCount > 0) {
+                              document.body.appendChild(loadingMsg);
+                              setTimeout(() => {
+                                   if (loadingMsg.parentNode) {
+                                        document.body.removeChild(loadingMsg);
+                                   }
+                              }, 3000);
+                         }
+
+                         // Apply modifications if we have both changelog data and modifications
+                         if (this.pendingModifications && processedCount > 0) {
+                              // Apply modifications immediately after finalizing data
+                              setTimeout(() => {
+                                   this.applyModifications(this.pendingModifications);
+                              }, 50);
+                         }
+                    }
+
+                    readFile(file) {
+                         return new Promise((resolve, reject) => {
+                              const reader = new FileReader();
+                              reader.onload = (e) => resolve(e.target.result);
+                              reader.onerror = () => reject(new Error("Failed to read file"));
+                              reader.readAsText(file);
+                         });
+                    }
+
+                    mergeFileData(jsonData, fileName) {
+                         // Check if file is already loaded
+                         const existingFile = this.loadedFiles.find((f) => f.name === fileName);
+                         if (existingFile) {
+                              console.warn(`File "${fileName}" is already loaded, skipping...`);
+                              return;
+                         }
+
+                         // Store file info
+                         this.loadedFiles.push({
+                              name: fileName,
+                              title: jsonData.title,
+                              generated_on: jsonData.generated_on,
+                              commitCount: (jsonData.commits || []).length,
+                         });
+
+                         let newCommitsCount = 0;
+                         let duplicateCommitsCount = 0;
+
+                         // Merge commits by hash
+                         (jsonData.commits || []).forEach((commit) => {
+                              const hash = commit.commit_hash;
+                              if (hash) {
+                                   if (!this.commitMap.has(hash)) {
+                                        // Add source file info to commit
+                                        const enrichedCommit = {
+                                             ...commit,
+                                             _sourceFile: fileName,
+                                        };
+                                        this.commitMap.set(hash, enrichedCommit);
+                                        newCommitsCount++;
+                                   } else {
+                                        duplicateCommitsCount++;
+                                   }
+                              }
+                         });
+
+                         console.log(`Merged "${fileName}": ${newCommitsCount} new commits, ${duplicateCommitsCount} duplicates skipped`);
+                    }
+
+                    storeModificationsFile(modificationsData, fileName) {
+                         // Store the modifications data for later application
+                         this.pendingModifications = modificationsData;
+
+                         // Add to loaded files list as a modifications file
+                         this.loadedFiles.push({
+                              name: fileName,
+                              title: "Modifications File",
+                              generated_on: modificationsData.generated_on,
+                              commitCount: modificationsData.modifications ? modificationsData.modifications.length : 0,
+                              isModificationsFile: true,
+                         });
+
+                         console.log(`Stored modifications file "${fileName}": ${modificationsData.modifications ? modificationsData.modifications.length : 0} modifications`);
+
+                         // If we already have changelog data loaded, apply modifications immediately
+                         if (this.allCommits && this.allCommits.length > 0) {
+                              setTimeout(() => {
+                                   this.applyModifications(this.pendingModifications);
+                              }, 100);
+                         }
+                    }
+
+                    finalizeData() {
+                         // Convert Map to array
+                         this.allCommits = Array.from(this.commitMap.values());
+
+                         // Filter out modifications files from the count for title
+                         const changelogFiles = this.loadedFiles.filter((f) => !f.isModificationsFile);
+
+                         // Create or update merged data object
+                         this.originalData = {
+                              title: `Merged Changelog (${changelogFiles.length} files)`,
+                              generated_on: new Date().toISOString().replace("T", " ").substring(0, 19),
+                              commits: this.allCommits,
+                              _sourceFiles: this.loadedFiles,
+                         };
+
+                         // Update loaded files display
+                         this.updateLoadedFilesList();
+
+                         this.parseAndDisplay(this.originalData);
+
+                         // Apply pending modifications if any exist (automatically when data is loaded)
+                         if (this.pendingModifications) {
+                              setTimeout(() => {
+                                   this.applyModifications(this.pendingModifications);
+                              }, 100); // Small delay to ensure display is updated first
+                         }
+                    }
+
+                    applyModifications(modificationsData) {
+                         if (!modificationsData.modifications || !Array.isArray(modificationsData.modifications)) {
+                              console.warn("Invalid modifications data");
+                              return;
+                         }
+
+                         let appliedCount = 0;
+                         let notFoundCount = 0;
+                         let commitLogMods = 0;
+                         let bugMods = 0;
+
+                         modificationsData.modifications.forEach((mod) => {
+                              const commit = this.allCommits.find((c) => c.commit_hash === mod.commit_hash);
+
+                              if (commit) {
+                                   // Merge commit log modifications
+                                   if (mod.commit_log_modified !== undefined) {
+                                        commit.commit_log_modified = mod.commit_log_modified;
+                                        commitLogMods++;
+                                   }
+
+                                   // Merge bug modifications
+                                   if (mod.bugs_modified !== undefined) {
+                                        commit.bugs_modified = [...mod.bugs_modified]; // Create a copy
+                                        bugMods++;
+                                   }
+
+                                   appliedCount++;
+                              } else {
+                                   notFoundCount++;
+                                   console.warn(`Commit not found for hash: ${mod.commit_hash}`);
+                              }
+                         });
+
+                         // Update filters to include new bug types from modifications
+                         if (bugMods > 0) {
+                              this.initializeFilters();
+                         }
+
+                         // Refresh the display with applied modifications
+                         this.applyFiltersAndDisplay();
+
+                         // Show detailed success message
+                         const successMsg = document.createElement("div");
+                         successMsg.style.cssText = `
+                    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                    background: #17a2b8; color: white; padding: 10px 20px;
+                    border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                `;
+
+                         let message = `🔄 Auto-applied ${appliedCount} modifications`;
+                         if (commitLogMods > 0 || bugMods > 0) {
+                              const details = [];
+                              if (commitLogMods > 0) details.push(`${commitLogMods} commit logs`);
+                              if (bugMods > 0) details.push(`${bugMods} bug lists`);
+                              message += ` (${details.join(", ")})`;
+                         }
+                         if (notFoundCount > 0) {
+                              message += ` - ${notFoundCount} commits not found`;
+                         }
+
+                         successMsg.textContent = message;
+                         document.body.appendChild(successMsg);
+
+                         setTimeout(() => {
+                              if (successMsg.parentNode) {
+                                   document.body.removeChild(successMsg);
+                              }
+                         }, 4000);
+                    }
+
+                    handleFile(file) {
+                         // Backwards compatibility - convert single file to array
+                         this.handleMultipleFiles([file]);
+                    }
+
+                    parseAndDisplay(data) {
+                         this.hideError();
+
+                         // Store original data
+                         this.originalData = data;
+                         this.allCommits = data.commits || [];
+
+                         // Show collapse toggle and update filename
+                         this.collapseToggle.style.display = "block";
+                         const fileCount = this.loadedFiles.length;
+                         if (fileCount === 1) {
+                              this.loadedFileName.textContent = this.loadedFiles[0].name;
+                         } else {
+                              this.loadedFileName.textContent = `${fileCount} files loaded`;
+                         }
+
+                         // Display changelog information
+                         this.displayChangelogInfo(data);
+
+                         // Initialize filters
+                         this.initializeFilters();
+
+                         // Display data with current filters (initially all data)
+                         this.applyFiltersAndDisplay();
+
+                         this.contentDiv.style.display = "block";
+                    }
+
+                    displayChangelogInfo(data) {
+                         let infoHtml = `
+                    <h3>${data.title || "Changelog"}</h3>
+                    <p><strong>Generated on:</strong> ${data.generated_on || "Unknown"}</p>
+                    <p><strong>Total unique commits:</strong> ${(data.commits || []).length}</p>
+                `;
+
+                         // Show source files info if multiple files were loaded
+                         if (data._sourceFiles && data._sourceFiles.length > 1) {
+                              infoHtml += `
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; color: #007bff;"><strong>Source Files (${data._sourceFiles.length})</strong></summary>
+                            <div style="margin-top: 10px; padding-left: 20px;">
+                    `;
+
+                              data._sourceFiles.forEach((file) => {
+                                   infoHtml += `
+                            <div style="margin-bottom: 5px; font-size: 0.9em;">
+                                <strong>${file.name}</strong> - ${file.commitCount} commits
+                                ${file.title ? `<br><em style="color: #6c757d;">${file.title}</em>` : ""}
+                            </div>
+                        `;
+                              });
+
+                              infoHtml += `
+                            </div>
+                        </details>
+                    `;
+                         }
+
+                         this.changelogInfoDiv.innerHTML = infoHtml;
+                    }
+
+                    groupCommitsByComponent(commits) {
+                         const groups = {};
+
+                         commits.forEach((commit) => {
+                              const component = commit.component || "Other/General";
+
+                              if (!groups[component]) {
+                                   groups[component] = [];
+                              }
+
+                              groups[component].push(commit);
+                         });
+
+                         return groups;
+                    }
+
+                    groupCommitsByType(commits) {
+                         const groups = {};
+
+                         commits.forEach((commit) => {
+                              const type = commit.type || "other";
+
+                              if (!groups[type]) {
+                                   groups[type] = [];
+                              }
+
+                              groups[type].push(commit);
+                         });
+
+                         return groups;
+                    }
+
+                    displayComponents(componentGroups) {
+                         this.componentsContainer.innerHTML = "";
+
+                         if (Object.keys(componentGroups).length === 0) {
+                              this.componentsContainer.innerHTML = '<div class="no-data">No commits found in the JSON data.</div>';
+                              return;
+                         }
+
+                         // Sort components alphabetically
+                         const sortedComponents = Object.keys(componentGroups).sort();
+
+                         sortedComponents.forEach((component) => {
+                              const commits = componentGroups[component];
+                              const section = this.createComponentSection(component, commits);
+                              this.componentsContainer.appendChild(section);
+                         });
+                    }
+
+                    createComponentSection(componentName, commits) {
+                         const section = document.createElement("div");
+                         section.className = "component-section";
+
+                         const title = document.createElement("div");
+                         title.className = "component-title";
+
+                         // Add type-specific styling when grouping by type
+                         if (this.currentGroupBy === "type") {
+                              title.classList.add(`type-${componentName}`);
+                         }
+
+                         title.textContent = `${componentName} (${commits.length} commits)`;
+
+                         const table = document.createElement("table");
+                         table.className = "commits-table";
+
+                         // Add type-grouping class when grouping by type
+                         if (this.currentGroupBy === "type") {
+                              table.classList.add("type-grouping");
+                         }
+
+                         // Table header - add bugs column when grouping by type
+                         const thead = document.createElement("thead");
+                         const firstColumnHeader = this.currentGroupBy === "component" ? "Type" : "Component";
+
+                         if (this.currentGroupBy === "type") {
+                              thead.innerHTML = `
+                                   <tr>
+                                        <th>${firstColumnHeader}</th>
+                                        <th>Bugs</th>
+                                        <th>Commit Message</th>
+                                        <th>Hash</th>
+                                        <th>Date</th>
+                                        <th>Author</th>
+                                        <th>Branches</th>
+                                   </tr>
+                              `;
+                         } else {
+                              thead.innerHTML = `
+                                   <tr>
+                                        <th>${firstColumnHeader}</th>
+                                        <th>Commit Message</th>
+                                        <th>Hash</th>
+                                        <th>Date</th>
+                                        <th>Author</th>
+                                        <th>Branches</th>
+                                   </tr>
+                              `;
+                         }
+                         table.appendChild(thead);
+
+                         // Table body
+                         const tbody = document.createElement("tbody");
+                         commits.forEach((commit) => {
+                              const row = this.createCommitRow(commit);
+                              tbody.appendChild(row);
+                         });
+                         table.appendChild(tbody);
+
+                         section.appendChild(title);
+                         section.appendChild(table);
+
+                         return section;
+                    }
+
+                    createCommitRow(commit) {
+                         const row = document.createElement("tr");
+
+                         const typeClass = commit.type || "other";
+                         const branches = Array.isArray(commit.branches) ? commit.branches.join(", ") : commit.branches || "";
+                         // Use modified bugs if available, otherwise original bugs
+                         const bugs = commit.bugs_modified !== undefined ? commit.bugs_modified : Array.isArray(commit.bugs) ? commit.bugs : Array.isArray(commit.bug) ? commit.bug : [];
+                         const areBugsModified = commit.bugs_modified !== undefined;
+
+                         // Display original commit log, body, and additional modified log if available
+                         const originalCommitLog = commit.commit_log || "";
+                         const commitBody = commit.body || "";
+                         const additionalCommitLog = commit.commit_log_modified || "";
+                         const isCommitLogModified = commit.commit_log_modified !== undefined && commit.commit_log_modified !== "";
+
+                         let commitLogDisplay = this.escapeHtml(originalCommitLog);
+
+                         // Only show additional commit log section if there is content
+                         if (isCommitLogModified && additionalCommitLog.trim() !== "") {
+                              commitLogDisplay += `<div class="additional-commit-log"><strong>Additional:</strong> ${this.escapeHtml(additionalCommitLog)}</div>`;
+                         }
+
+                         // Add expandable body if it exists
+                         if (commitBody && commitBody.trim() !== "") {
+                              commitLogDisplay += this.createExpandableBody(commitBody, commit.commit_hash);
+                         }
+
+                         // No need for overall expandable container anymore
+                         const commitLogHtml = `<div class="commit-log-container">${commitLogDisplay}</div>`;
+
+                         // Create row content based on grouping method
+                         let rowContent;
+                         if (this.currentGroupBy === "component") {
+                              // Original layout: Type (with bugs inline) | Commit Message | Hash | Date | Author | Branches
+                              let typeContent = `<span class="commit-type ${typeClass}">${commit.type || "other"}</span>`;
+                              const isFixType = (commit.type || "other") === "fix";
+
+                              if (isFixType) {
+                                   if (bugs.length > 0) {
+                                        const bugTags = bugs.map((bug) => `<span class="bug-tag editable" data-bug="${this.escapeHtml(bug)}">${this.escapeHtml(bug)}<span class="remove-bug">×</span></span>`).join(" ");
+                                        typeContent += `<br/><small class="bugs-container">${bugTags}<button class="add-bug-btn">+ Bug</button></small>`;
+                                   } else {
+                                        typeContent += `<br/><small class="bugs-container"><button class="add-bug-btn">+ Bug</button></small>`;
+                                   }
+                              } else if (bugs.length > 0) {
+                                   // Show existing bugs but make them non-editable for non-fix types
+                                   const bugTags = bugs.map((bug) => `<span class="bug-tag readonly">${this.escapeHtml(bug)}</span>`).join(" ");
+                                   typeContent += `<br/><small class="bugs-container">${bugTags}</small>`;
+                              }
+
+                              rowContent = `
+                                   <td>${typeContent}</td>
+                                   <td class="editable commit-log-cell" data-hash="${commit.commit_hash}">${commitLogHtml}</td>
+                                   <td><span class="commit-hash">${commit.commit_hash || ""}</span></td>
+                                   <td>${commit.date || ""}</td>
+                                   <td>${this.escapeHtml(commit.author || "")}</td>
+                                   <td>${this.escapeHtml(branches)}</td>
+                              `;
+                         } else {
+                              // Type grouping layout: Component | Bugs | Commit Message | Hash | Date | Author | Branches
+                              const isFixType = (commit.type || "other") === "fix";
+                              let bugsContent = "";
+
+                              if (isFixType) {
+                                   if (bugs.length > 0) {
+                                        const bugTags = bugs.map((bug) => `<span class="bug-tag editable" data-bug="${this.escapeHtml(bug)}">${this.escapeHtml(bug)}<span class="remove-bug">×</span></span>`).join(" ");
+                                        bugsContent = `<div class="bugs-container">${bugTags}<button class="add-bug-btn">+ Bug</button></div>`;
+                                   } else {
+                                        bugsContent = `<div class="bugs-container"><button class="add-bug-btn">+ Bug</button></div>`;
+                                   }
+                              } else if (bugs.length > 0) {
+                                   // Show existing bugs but make them non-editable for non-fix types
+                                   const bugTags = bugs.map((bug) => `<span class="bug-tag readonly">${this.escapeHtml(bug)}</span>`).join(" ");
+                                   bugsContent = `<div class="bugs-container">${bugTags}</div>`;
+                              }
+
+                              rowContent = `
+                                   <td>${this.escapeHtml(commit.component || "Other/General")}</td>
+                                   <td>${bugsContent}</td>
+                                   <td class="editable commit-log-cell" data-hash="${commit.commit_hash}">${commitLogHtml}</td>
+                                   <td><span class="commit-hash">${commit.commit_hash || ""}</span></td>
+                                   <td>${commit.date || ""}</td>
+                                   <td>${this.escapeHtml(commit.author || "")}</td>
+                                   <td>${this.escapeHtml(branches)}</td>
+                              `;
+                         }
+
+                         row.innerHTML = rowContent;
+
+                         // Add event listeners for editable elements
+                         this.addEditEventListeners(row, commit);
+
+                         // Add event listeners for expandable commit log
+                         this.addExpandableEventListeners(row);
+
+                         return row;
+                    }
+
+                    createExpandableBody(bodyText, commitHash) {
+                         // Create a temporary element to measure the body content height
+                         const tempDiv = document.createElement("div");
+                         tempDiv.style.cssText = "position: absolute; visibility: hidden; height: auto; width: 300px; line-height: 1.4; font-size: 0.95em;";
+                         tempDiv.className = "commit-body";
+                         tempDiv.textContent = bodyText;
+                         document.body.appendChild(tempDiv);
+
+                         const fullHeight = tempDiv.offsetHeight;
+                         const maxPreviewHeight = 3 * 1.4 * 16 * 0.95; // Roughly 3 lines for body content
+
+                         document.body.removeChild(tempDiv);
+
+                         // If body content is short enough, don't make it expandable
+                         if (fullHeight <= maxPreviewHeight) {
+                              return `<div class="commit-body">${this.escapeHtml(bodyText)}</div>`;
+                         }
+
+                         // Create expandable structure for body only
+                         const containerId = `commit-body-${commitHash}`;
+                         return `
+                              <div class="commit-body-container" id="${containerId}">
+                                   <div class="commit-body commit-body-preview has-overflow">
+                                        ${this.escapeHtml(bodyText)}
+                                   </div>
+                                   <div class="commit-body commit-body-full" style="display: none;">
+                                        ${this.escapeHtml(bodyText)}
+                                   </div>
+                                   <div class="commit-log-toggle" data-target="${containerId}">
+                                        Show more
+                                   </div>
+                              </div>
+                         `;
+                    }
+
+                    createExpandableCommitLog(commitLogHtml, commitHash) {
+                         // Create a temporary element to measure the content height
+                         const tempDiv = document.createElement("div");
+                         tempDiv.style.cssText = "position: absolute; visibility: hidden; height: auto; width: 300px; line-height: 1.4;";
+                         tempDiv.innerHTML = commitLogHtml;
+                         document.body.appendChild(tempDiv);
+
+                         const fullHeight = tempDiv.offsetHeight;
+                         const maxPreviewHeight = 4.2 * 1.4 * 16; // Roughly 3 lines at 1.4 line-height and 16px font-size
+
+                         document.body.removeChild(tempDiv);
+
+                         // If content is short enough, don't make it expandable
+                         if (fullHeight <= maxPreviewHeight) {
+                              return `<div class="commit-log-container">${commitLogHtml}</div>`;
+                         }
+
+                         // For expandable content, we need to handle "Additional" sections differently
+                         // The preview should show truncated content, but if there's additional content,
+                         // it should always be visible in the full view
+                         const containerId = `commit-log-${commitHash}`;
+                         return `
+                              <div class="commit-log-container" id="${containerId}">
+                                   <div class="commit-log-preview has-overflow">
+                                        ${commitLogHtml}
+                                   </div>
+                                   <div class="commit-log-full" style="display: none;">
+                                        ${commitLogHtml}
+                                   </div>
+                                   <div class="commit-log-toggle" data-target="${containerId}">
+                                        Show more
+                                   </div>
+                              </div>
+                         `;
+                    }
+
+                    addExpandableEventListeners(row) {
+                         const toggles = row.querySelectorAll(".commit-log-toggle");
+                         toggles.forEach((toggle) => {
+                              toggle.addEventListener("click", (e) => {
+                                   e.stopPropagation();
+                                   this.toggleCommitLogExpansion(toggle);
+                              });
+                         });
+                    }
+
+                    toggleCommitLogExpansion(toggle) {
+                         const containerId = toggle.dataset.target;
+                         const container = document.getElementById(containerId);
+                         if (!container) return;
+
+                         // Handle both commit-log and commit-body containers
+                         const preview = container.querySelector(".commit-log-preview, .commit-body-preview");
+                         const full = container.querySelector(".commit-log-full, .commit-body-full");
+
+                         if (!preview || !full) return;
+
+                         if (preview.style.display === "none") {
+                              // Currently expanded, collapse it
+                              preview.style.display = "block";
+                              full.style.display = "none";
+                              toggle.textContent = "Show more";
+                         } else {
+                              // Currently collapsed, expand it
+                              preview.style.display = "none";
+                              full.style.display = "block";
+                              toggle.textContent = "Show less";
+                         }
+                    }
+
+                    addEditEventListeners(row, commit) {
+                         // Make commit log editable
+                         const commitLogCell = row.querySelector(".commit-log-cell");
+                         if (commitLogCell) {
+                              commitLogCell.addEventListener("click", (e) => {
+                                   // Don't trigger edit mode when clicking the toggle button
+                                   if (e.target.classList.contains("commit-log-toggle")) {
+                                        return;
+                                   }
+                                   if (!commitLogCell.querySelector(".editable-textarea")) {
+                                        this.makeCommitLogEditable(commitLogCell, commit);
+                                   }
+                              });
+                         }
+
+                         // Make bug tags removable and add bug button functional (only for fix-type commits)
+                         const bugsContainer = row.querySelector(".bugs-container");
+                         const isFixType = (commit.type || "other") === "fix";
+
+                         if (bugsContainer && isFixType) {
+                              // Remove bug functionality (only for fix types)
+                              bugsContainer.addEventListener("click", (e) => {
+                                   if (e.target.classList.contains("remove-bug")) {
+                                        const bugTag = e.target.parentElement;
+                                        const bugValue = bugTag.dataset.bug;
+                                        this.removeBug(commit, bugValue);
+                                        this.refreshCommitRow(row, commit);
+                                   }
+                              });
+
+                              // Add bug functionality (only for fix types)
+                              const addBugBtn = bugsContainer.querySelector(".add-bug-btn");
+                              if (addBugBtn) {
+                                   addBugBtn.addEventListener("click", (e) => {
+                                        e.stopPropagation();
+                                        this.showAddBugDialog(commit, () => {
+                                             this.refreshCommitRow(row, commit);
+                                        });
+                                   });
+                              }
+                         }
+                    }
+
+                    makeCommitLogEditable(cell, commit) {
+                         // Edit only the additional commit log, not the original
+                         const additionalText = commit.commit_log_modified || "";
+                         const originalText = commit.commit_log || "";
+
+                         // Create container for original (readonly) and additional (editable)
+                         const container = document.createElement("div");
+
+                         // Show original commit log as readonly
+                         const originalDiv = document.createElement("div");
+                         originalDiv.className = "original-commit-log";
+                         originalDiv.innerHTML = `<strong>Original:</strong> ${this.escapeHtml(originalText)}`;
+
+                         // Create editable textarea for additional commit log
+                         const label = document.createElement("div");
+                         label.innerHTML = "<strong>Additional:</strong>";
+                         label.style.marginTop = "8px";
+                         label.style.marginBottom = "4px";
+
+                         const textarea = document.createElement("textarea");
+                         textarea.className = "editable-textarea";
+                         textarea.value = additionalText;
+                         textarea.placeholder = "Add additional commit information...";
+
+                         const buttonsDiv = document.createElement("div");
+                         buttonsDiv.className = "edit-buttons";
+
+                         const saveBtn = document.createElement("button");
+                         saveBtn.className = "edit-btn";
+                         saveBtn.textContent = "Save";
+
+                         const cancelBtn = document.createElement("button");
+                         cancelBtn.className = "edit-btn cancel";
+                         cancelBtn.textContent = "Cancel";
+
+                         buttonsDiv.appendChild(saveBtn);
+                         buttonsDiv.appendChild(cancelBtn);
+
+                         container.appendChild(originalDiv);
+                         container.appendChild(label);
+                         container.appendChild(textarea);
+                         container.appendChild(buttonsDiv);
+
+                         cell.innerHTML = "";
+                         cell.appendChild(container);
+                         textarea.focus();
+
+                         saveBtn.addEventListener("click", (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+
+                              // Save additional commit log
+                              commit.commit_log_modified = textarea.value;
+
+                              // Exit editing mode and return to normal display
+                              this.exitCommitLogEditMode(cell, commit, originalText);
+                              this.markAsModified();
+                         });
+
+                         cancelBtn.addEventListener("click", (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+
+                              // Exit editing mode without saving changes
+                              this.exitCommitLogEditMode(cell, commit, originalText);
+                         });
+
+                         textarea.addEventListener("keydown", (e) => {
+                              if (e.key === "Escape") {
+                                   cancelBtn.click();
+                              } else if (e.key === "Enter" && e.ctrlKey) {
+                                   saveBtn.click();
+                              }
+                         });
+                    }
+
+                    exitCommitLogEditMode(cell, commit, originalText) {
+                         // Clear all existing content and event listeners
+                         cell.innerHTML = "";
+                         cell.className = "editable commit-log-cell"; // Reset classes
+
+                         // Rebuild display with original + additional + expandable body (if any)
+                         let commitLogDisplay = this.escapeHtml(originalText);
+
+                         // Only show additional commit log section if there is content
+                         const hasAdditional = commit.commit_log_modified && commit.commit_log_modified.trim() !== "";
+                         if (hasAdditional) {
+                              commitLogDisplay += `<div class="additional-commit-log"><strong>Additional:</strong> ${this.escapeHtml(commit.commit_log_modified)}</div>`;
+                         }
+
+                         // Add expandable body if it exists
+                         const commitBody = commit.body || "";
+                         if (commitBody && commitBody.trim() !== "") {
+                              commitLogDisplay += this.createExpandableBody(commitBody, commit.commit_hash);
+                         }
+
+                         // No need for overall expandable container anymore
+                         const commitLogHtml = `<div class="commit-log-container">${commitLogDisplay}</div>`;
+                         cell.innerHTML = commitLogHtml;
+
+                         // Re-add the click event listener for future edits
+                         const newClickHandler = (e) => {
+                              // Don't trigger edit mode when clicking the toggle button
+                              if (e.target.classList.contains("commit-log-toggle")) {
+                                   return;
+                              }
+                              if (!cell.querySelector(".editable-textarea")) {
+                                   this.makeCommitLogEditable(cell, commit);
+                              }
+                         };
+                         cell.addEventListener("click", newClickHandler);
+
+                         // Re-add expandable event listeners
+                         const row = cell.closest("tr");
+                         if (row) {
+                              this.addExpandableEventListeners(row);
+                         }
+                    }
+
+                    showAddBugDialog(commit, callback) {
+                         const bugTypes = ["functional", "logical", "workflow", "unit-test", "boundary", "security", "performance"];
+                         const modal = document.createElement("div");
+                         modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
+                    align-items: center; justify-content: center;
+                `;
+
+                         const dialog = document.createElement("div");
+                         dialog.style.cssText = `
+                    background: white; padding: 20px; border-radius: 8px; 
+                    min-width: 300px; max-width: 500px;
+                `;
+
+                         dialog.innerHTML = `
+                    <h3>Add Bug Type</h3>
+                    <select id="bugTypeSelect" style="width: 100%; padding: 8px; margin: 10px 0;">
+                        ${bugTypes.map((type) => `<option value="${type}">${type}</option>`).join("")}
+                    </select>
+                    <div style="margin-top: 15px;">
+                        <button id="addBugSave" class="edit-btn">Add</button>
+                        <button id="addBugCancel" class="edit-btn cancel">Cancel</button>
+                    </div>
+                `;
+
+                         modal.appendChild(dialog);
+                         document.body.appendChild(modal);
+
+                         const select = dialog.querySelector("#bugTypeSelect");
+                         const saveBtn = dialog.querySelector("#addBugSave");
+                         const cancelBtn = dialog.querySelector("#addBugCancel");
+
+                         saveBtn.addEventListener("click", () => {
+                              const selectedBug = select.value;
+                              this.addBug(commit, selectedBug);
+                              document.body.removeChild(modal);
+                              callback();
+                         });
+
+                         cancelBtn.addEventListener("click", () => {
+                              document.body.removeChild(modal);
+                         });
+
+                         modal.addEventListener("click", (e) => {
+                              if (e.target === modal) {
+                                   document.body.removeChild(modal);
+                              }
+                         });
+                    }
+
+                    addBug(commit, bugType) {
+                         // Initialize bugs_modified from original bugs if not already set
+                         if (commit.bugs_modified === undefined) {
+                              commit.bugs_modified = Array.isArray(commit.bugs) ? [...commit.bugs] : Array.isArray(commit.bug) ? [...commit.bug] : [];
+                         }
+
+                         if (!commit.bugs_modified.includes(bugType)) {
+                              commit.bugs_modified.push(bugType);
+                              this.markAsModified();
+                         }
+                    }
+
+                    removeBug(commit, bugType) {
+                         // Initialize bugs_modified from original bugs if not already set
+                         if (commit.bugs_modified === undefined) {
+                              commit.bugs_modified = Array.isArray(commit.bugs) ? [...commit.bugs] : Array.isArray(commit.bug) ? [...commit.bug] : [];
+                         }
+
+                         commit.bugs_modified = commit.bugs_modified.filter((bug) => bug !== bugType);
+                         this.markAsModified();
+                    }
+
+                    refreshCommitRow(row, commit) {
+                         // Store current expansion state before refreshing (for body only now)
+                         const commitLogCell = row.querySelector(".commit-log-cell");
+                         let isBodyExpanded = false;
+                         if (commitLogCell) {
+                              const bodyContainer = commitLogCell.querySelector(".commit-body-container");
+                              if (bodyContainer) {
+                                   const preview = bodyContainer.querySelector(".commit-body-preview");
+                                   isBodyExpanded = preview && preview.style.display === "none";
+                              }
+                         }
+
+                         // Find the commit in our data and update the row
+                         const newRow = this.createCommitRow(commit);
+                         row.parentNode.replaceChild(newRow, row);
+
+                         // Restore body expansion state if it was expanded
+                         if (isBodyExpanded) {
+                              const newCommitLogCell = newRow.querySelector(".commit-log-cell");
+                              if (newCommitLogCell) {
+                                   const bodyToggle = newCommitLogCell.querySelector(".commit-body-container .commit-log-toggle");
+                                   if (bodyToggle) {
+                                        this.toggleCommitLogExpansion(bodyToggle);
+                                   }
+                              }
+                         }
+                    }
+
+                    markAsModified() {
+                         // Add a visual indicator that the data has been modified
+                         if (!document.querySelector(".modified-indicator")) {
+                              const indicator = document.createElement("div");
+                              indicator.className = "modified-indicator";
+                              indicator.style.cssText = `
+                        position: fixed; top: 10px; right: 10px; background: #ffc107; 
+                        color: #212529; padding: 8px 12px; border-radius: 4px; 
+                        font-size: 0.9em; z-index: 999;
+                    `;
+                              indicator.innerHTML = '📝 Data Modified - <button onclick="this.parentElement.style.display=\'none\'" style="background:none;border:none;color:inherit;cursor:pointer;">×</button>';
+                              document.body.appendChild(indicator);
+                         }
+                    }
+
+                    escapeHtml(text) {
+                         const div = document.createElement("div");
+                         div.textContent = text;
+                         return div.innerHTML;
+                    }
+
+                    showError(message) {
+                         this.errorDiv.textContent = message;
+                         this.errorDiv.style.display = "block";
+                         this.contentDiv.style.display = "none";
+                    }
+
+                    hideError() {
+                         this.errorDiv.style.display = "none";
+                    }
+
+                    initializeFilters() {
+                         // Extract unique values for filter options
+                         const types = [...new Set(this.allCommits.map((c) => c.type || "other"))].sort();
+                         const authors = [...new Set(this.allCommits.map((c) => c.author || "Unknown"))].sort();
+                         const allBranches = this.allCommits.flatMap((c) => (Array.isArray(c.branches) ? c.branches : c.branches ? [c.branches] : []));
+                         const branches = [...new Set(allBranches)].sort();
+                         const allBugs = this.allCommits.flatMap((c) => {
+                              const bugs = c.bugs_modified !== undefined ? c.bugs_modified : Array.isArray(c.bugs) ? c.bugs : Array.isArray(c.bug) ? c.bug : [];
+                              return Array.isArray(bugs) ? bugs : [];
+                         });
+                         const bugTypes = [...new Set(allBugs)].sort();
+                         const allFiles = this.allCommits.flatMap((c) => (Array.isArray(c.files) ? c.files : []));
+                         const files = [...new Set(allFiles)].sort();
+
+                         // Populate filter containers
+                         this.populateFilter(this.typeFilter, types, "type", "No commit types found");
+                         this.populateFilter(this.authorFilter, authors, "author", "No authors found");
+                         this.populateFilter(this.branchFilter, branches, "branch", "No branches found");
+                         this.populateFilter(this.excludeBranchFilter, branches, "exclude-branch", "No branches found");
+                         this.populateFilter(this.bugsFilter, bugTypes, "bug", "No bug types found");
+                         this.populateFilesFilter(files);
+
+                         // Set date range limits
+                         const dates = this.allCommits
+                              .map((c) => (c.date ? new Date(c.date.split(" ")[0]) : null))
+                              .filter((d) => d && !isNaN(d))
+                              .sort((a, b) => a - b);
+
+                         if (dates.length > 0) {
+                              const minDate = dates[0].toISOString().split("T")[0];
+                              const maxDate = dates[dates.length - 1].toISOString().split("T")[0];
+                              this.dateFromFilter.min = minDate;
+                              this.dateFromFilter.max = maxDate;
+                              this.dateToFilter.min = minDate;
+                              this.dateToFilter.max = maxDate;
+                         }
+
+                         // Show filters section
+                         this.filtersSection.classList.add("show");
+                    }
+
+                    populateFilter(filterElement, options, prefix, emptyMessage) {
+                         filterElement.innerHTML = "";
+
+                         if (options.length === 0) {
+                              filterElement.innerHTML = `<div class="filter-items"><div style="color: #6c757d; font-style: italic; padding: 4px;">${emptyMessage}</div></div>`;
+                              return;
+                         }
+
+                         // Create search input
+                         const searchInput = document.createElement("input");
+                         searchInput.type = "text";
+                         searchInput.className = "filter-search";
+                         searchInput.placeholder = `Search ${prefix}s...`;
+                         filterElement.appendChild(searchInput);
+
+                         // Create items container
+                         const itemsContainer = document.createElement("div");
+                         itemsContainer.className = "filter-items";
+                         filterElement.appendChild(itemsContainer);
+
+                         // Store all options for filtering
+                         const allOptions = [...options];
+
+                         const renderItems = (filteredOptions) => {
+                              itemsContainer.innerHTML = "";
+
+                              if (filteredOptions.length === 0) {
+                                   itemsContainer.innerHTML = `<div style="color: #6c757d; font-style: italic; padding: 4px;">No matches found</div>`;
+                                   return;
+                              }
+
+                              filteredOptions.forEach((option) => {
+                                   const itemDiv = document.createElement("div");
+                                   itemDiv.className = "filter-item";
+
+                                   const checkboxId = `${prefix}-${option.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+                                   itemDiv.innerHTML = `
+                                        <input type="checkbox" id="${checkboxId}" value="${this.escapeHtml(option)}" />
+                                        <label for="${checkboxId}" title="${this.escapeHtml(option)}">${this.escapeHtml(option)}</label>
+                                   `;
+
+                                   itemsContainer.appendChild(itemDiv);
+                              });
+                         };
+
+                         // Initial render with all options
+                         renderItems(allOptions);
+
+                         // Add search functionality
+                         searchInput.addEventListener("input", (e) => {
+                              const searchTerm = e.target.value.toLowerCase();
+                              const filteredOptions = allOptions.filter((option) => option.toLowerCase().includes(searchTerm));
+                              renderItems(filteredOptions);
+
+                              // Restore checked state for visible items
+                              this.restoreFilterState(filterElement, prefix);
+                         });
+
+                         // Add event listeners for checkboxes (only add once)
+                         if (!filterElement.hasEventListener) {
+                              filterElement.addEventListener("change", (e) => {
+                                   if (e.target.type === "checkbox") {
+                                        this.handleFilterChange();
+                                   }
+                              });
+                              filterElement.hasEventListener = true;
+                         }
+                    }
+
+                    populateFilesFilter(files) {
+                         this.populateFilter(this.filesFilter, files, "file", "No files found in commits");
+                    }
+
+                    restoreFilterState(filterElement, prefix) {
+                         // Get current filter values for this filter type
+                         const currentValues =
+                              this.currentFilters[prefix === "type" ? "types" : prefix === "author" ? "authors" : prefix === "branch" ? "branches" : prefix === "exclude-branch" ? "excludeBranches" : prefix === "bug" ? "bugs" : "files"] || [];
+
+                         // Restore checked state for visible checkboxes
+                         currentValues.forEach((value) => {
+                              const checkbox = filterElement.querySelector(`input[value="${value}"]`);
+                              if (checkbox) {
+                                   checkbox.checked = true;
+                              }
+                         });
+                    }
+
+                    handleFilterChange() {
+                         // Update current filters
+                         this.currentFilters.types = Array.from(this.typeFilter.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                         this.currentFilters.authors = Array.from(this.authorFilter.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                         this.currentFilters.branches = Array.from(this.branchFilter.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                         this.currentFilters.excludeBranches = Array.from(this.excludeBranchFilter.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                         this.currentFilters.bugs = Array.from(this.bugsFilter.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                         this.currentFilters.files = Array.from(this.filesFilter.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+                         this.currentFilters.dateFrom = this.dateFromFilter.value || null;
+                         this.currentFilters.dateTo = this.dateToFilter.value || null;
+
+                         // Update active filters display
+                         this.updateActiveFiltersDisplay();
+
+                         // Apply filters and refresh display
+                         this.applyFiltersAndDisplay();
+                    }
+
+                    updateActiveFiltersDisplay() {
+                         this.filterTagsDiv.innerHTML = "";
+                         let hasActiveFilters = false;
+
+                         // Type filters
+                         this.currentFilters.types.forEach((type) => {
+                              this.addFilterTag("Type", type, () => this.removeFilter("types", type));
+                              hasActiveFilters = true;
+                         });
+
+                         // Author filters
+                         this.currentFilters.authors.forEach((author) => {
+                              this.addFilterTag("Author", author, () => this.removeFilter("authors", author));
+                              hasActiveFilters = true;
+                         });
+
+                         // Branch filters
+                         this.currentFilters.branches.forEach((branch) => {
+                              this.addFilterTag("Include Branch", branch, () => this.removeFilter("branches", branch));
+                              hasActiveFilters = true;
+                         });
+
+                         // Exclude branch filters
+                         this.currentFilters.excludeBranches.forEach((branch) => {
+                              this.addFilterTag("Exclude Branch", branch, () => this.removeFilter("excludeBranches", branch));
+                              hasActiveFilters = true;
+                         });
+
+                         // Bug filters
+                         this.currentFilters.bugs.forEach((bug) => {
+                              this.addFilterTag("Bug Type", bug, () => this.removeFilter("bugs", bug));
+                              hasActiveFilters = true;
+                         });
+
+                         // File filters
+                         this.currentFilters.files.forEach((file) => {
+                              this.addFilterTag("File", file, () => this.removeFilter("files", file));
+                              hasActiveFilters = true;
+                         });
+
+                         // Date range filters
+                         if (this.currentFilters.dateFrom) {
+                              this.addFilterTag("From", this.currentFilters.dateFrom, () => this.removeFilter("dateFrom"));
+                              hasActiveFilters = true;
+                         }
+                         if (this.currentFilters.dateTo) {
+                              this.addFilterTag("To", this.currentFilters.dateTo, () => this.removeFilter("dateTo"));
+                              hasActiveFilters = true;
+                         }
+
+                         this.activeFiltersDiv.style.display = hasActiveFilters ? "block" : "none";
+                    }
+
+                    addFilterTag(category, value, removeCallback) {
+                         const tag = document.createElement("div");
+                         tag.className = "filter-tag";
+                         tag.innerHTML = `
+                    <span>${category}: ${value}</span>
+                    <span class="remove" title="Remove filter">×</span>
+                `;
+                         tag.querySelector(".remove").addEventListener("click", removeCallback);
+                         this.filterTagsDiv.appendChild(tag);
+                    }
+
+                    removeFilter(filterType, value = null) {
+                         if (filterType === "dateFrom") {
+                              this.currentFilters.dateFrom = null;
+                              this.dateFromFilter.value = "";
+                         } else if (filterType === "dateTo") {
+                              this.currentFilters.dateTo = null;
+                              this.dateToFilter.value = "";
+                         } else {
+                              const index = this.currentFilters[filterType].indexOf(value);
+                              if (index > -1) {
+                                   this.currentFilters[filterType].splice(index, 1);
+                              }
+                              // Update select element
+                              // Handle all filters (checkboxes)
+                              const filterElement =
+                                   filterType === "types"
+                                        ? this.typeFilter
+                                        : filterType === "authors"
+                                        ? this.authorFilter
+                                        : filterType === "branches"
+                                        ? this.branchFilter
+                                        : filterType === "excludeBranches"
+                                        ? this.excludeBranchFilter
+                                        : filterType === "bugs"
+                                        ? this.bugsFilter
+                                        : this.filesFilter;
+
+                              const checkbox = filterElement.querySelector(`input[value="${value}"]`);
+                              if (checkbox) {
+                                   checkbox.checked = false;
+                              } else {
+                                   // If checkbox not visible, clear search to show all items and try again
+                                   const searchInput = filterElement.querySelector(".filter-search");
+                                   if (searchInput && searchInput.value) {
+                                        searchInput.value = "";
+                                        searchInput.dispatchEvent(new Event("input"));
+                                        // Try again after clearing search
+                                        setTimeout(() => {
+                                             const retryCheckbox = filterElement.querySelector(`input[value="${value}"]`);
+                                             if (retryCheckbox) {
+                                                  retryCheckbox.checked = false;
+                                             }
+                                        }, 0);
+                                   }
+                              }
+                         }
+
+                         this.updateActiveFiltersDisplay();
+                         this.applyFiltersAndDisplay();
+                    }
+
+                    clearAllFilters() {
+                         // Reset filter state
+                         this.currentFilters = {
+                              types: [],
+                              authors: [],
+                              branches: [],
+                              excludeBranches: [],
+                              bugs: [],
+                              files: [],
+                              dateFrom: null,
+                              dateTo: null,
+                         };
+
+                         // Clear all filter checkboxes and search inputs
+                         [this.typeFilter, this.authorFilter, this.branchFilter, this.excludeBranchFilter, this.bugsFilter, this.filesFilter].forEach((filter) => {
+                              filter.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false));
+                              const searchInput = filter.querySelector(".filter-search");
+                              if (searchInput) {
+                                   searchInput.value = "";
+                                   // Trigger search to show all items
+                                   searchInput.dispatchEvent(new Event("input"));
+                              }
+                         });
+                         this.dateFromFilter.value = "";
+                         this.dateToFilter.value = "";
+
+                         // Update display
+                         this.updateActiveFiltersDisplay();
+                         this.applyFiltersAndDisplay();
+                    }
+
+                    applyFiltersAndDisplay() {
+                         // Filter commits
+                         const filteredCommits = this.filterCommits(this.allCommits);
+
+                         // Group filtered commits by current grouping method
+                         const groups = this.currentGroupBy === "component" ? this.groupCommitsByComponent(filteredCommits) : this.groupCommitsByType(filteredCommits);
+
+                         // Update results summary
+                         this.updateResultsSummary(filteredCommits.length, this.allCommits.length);
+
+                         // Display filtered groups
+                         this.displayComponents(groups);
+                    }
+
+                    handleLayoutChange() {
+                         this.currentGroupBy = this.groupByComponent.checked ? "component" : "type";
+                         this.applyFiltersAndDisplay();
+                    }
+
+                    handleSearchChange() {
+                         this.currentSearchTerm = this.searchInput.value.trim();
+
+                         // Show/hide clear button
+                         if (this.currentSearchTerm) {
+                              this.searchClear.style.display = "flex";
+                         } else {
+                              this.searchClear.style.display = "none";
+                         }
+
+                         // Apply search and refresh display
+                         this.applyFiltersAndDisplay();
+                    }
+
+                    clearSearch() {
+                         this.searchInput.value = "";
+                         this.currentSearchTerm = "";
+                         this.searchClear.style.display = "none";
+                         this.applyFiltersAndDisplay();
+                    }
+
+                    toggleFileInputCollapse() {
+                         const isCollapsed = this.dropZone.classList.contains("collapsed");
+
+                         if (isCollapsed) {
+                              // Expand
+                              this.dropZone.classList.remove("collapsed");
+                              this.collapseToggle.textContent = "−";
+                              this.collapseToggle.title = "Collapse file input";
+                         } else {
+                              // Collapse
+                              this.dropZone.classList.add("collapsed");
+                              this.collapseToggle.textContent = "+";
+                              this.collapseToggle.title = "Expand file input";
+                         }
+                    }
+
+                    filterCommits(commits) {
+                         return commits.filter((commit) => {
+                              // Search filter
+                              if (this.currentSearchTerm) {
+                                   const searchTerm = this.currentSearchTerm.toLowerCase();
+                                   // Include both original and additional commit logs in search
+                                   const originalCommitLog = commit.commit_log || "";
+                                   const additionalCommitLog = commit.commit_log_modified || "";
+                                   const bugs = commit.bugs_modified !== undefined ? commit.bugs_modified : Array.isArray(commit.bugs) ? commit.bugs : Array.isArray(commit.bug) ? commit.bug : [];
+
+                                   const searchableText = [
+                                        originalCommitLog,
+                                        additionalCommitLog,
+                                        commit.body || "",
+                                        commit.author || "",
+                                        commit.component || "",
+                                        commit.type || "",
+                                        commit.commit_hash || "",
+                                        Array.isArray(commit.branches) ? commit.branches.join(" ") : commit.branches || "",
+                                        Array.isArray(bugs) ? bugs.join(" ") : "",
+                                        Array.isArray(commit.files) ? commit.files.join(" ") : "",
+                                   ]
+                                        .join(" ")
+                                        .toLowerCase();
+
+                                   if (!searchableText.includes(searchTerm)) {
+                                        return false;
+                                   }
+                              }
+
+                              // Type filter
+                              if (this.currentFilters.types.length > 0) {
+                                   const commitType = commit.type || "other";
+                                   if (!this.currentFilters.types.includes(commitType)) {
+                                        return false;
+                                   }
+                              }
+
+                              // Author filter
+                              if (this.currentFilters.authors.length > 0) {
+                                   const commitAuthor = commit.author || "Unknown";
+                                   if (!this.currentFilters.authors.includes(commitAuthor)) {
+                                        return false;
+                                   }
+                              }
+
+                              // Include branch filter
+                              if (this.currentFilters.branches.length > 0) {
+                                   const commitBranches = Array.isArray(commit.branches) ? commit.branches : commit.branches ? [commit.branches] : [];
+                                   const hasMatchingBranch = commitBranches.some((branch) => this.currentFilters.branches.includes(branch));
+                                   if (!hasMatchingBranch) {
+                                        return false;
+                                   }
+                              }
+
+                              // Exclude branch filter
+                              if (this.currentFilters.excludeBranches.length > 0) {
+                                   const commitBranches = Array.isArray(commit.branches) ? commit.branches : commit.branches ? [commit.branches] : [];
+                                   const hasExcludedBranch = commitBranches.some((branch) => this.currentFilters.excludeBranches.includes(branch));
+                                   if (hasExcludedBranch) {
+                                        return false;
+                                   }
+                              }
+
+                              // Bug filter (use modified bugs if available)
+                              if (this.currentFilters.bugs.length > 0) {
+                                   const commitBugs = commit.bugs_modified !== undefined ? commit.bugs_modified : Array.isArray(commit.bugs) ? commit.bugs : Array.isArray(commit.bug) ? commit.bug : [];
+                                   const hasMatchingBug = commitBugs.some((bug) => this.currentFilters.bugs.includes(bug));
+                                   if (!hasMatchingBug) {
+                                        return false;
+                                   }
+                              }
+
+                              // Files filter
+                              if (this.currentFilters.files.length > 0) {
+                                   const commitFiles = Array.isArray(commit.files) ? commit.files : [];
+                                   const hasMatchingFile = commitFiles.some((file) => this.currentFilters.files.includes(file));
+                                   if (!hasMatchingFile) {
+                                        return false;
+                                   }
+                              }
+
+                              // Date range filter
+                              if (this.currentFilters.dateFrom || this.currentFilters.dateTo) {
+                                   const commitDate = commit.date ? new Date(commit.date.split(" ")[0]) : null;
+                                   if (!commitDate || isNaN(commitDate)) {
+                                        return false;
+                                   }
+
+                                   if (this.currentFilters.dateFrom) {
+                                        const fromDate = new Date(this.currentFilters.dateFrom);
+                                        if (commitDate < fromDate) {
+                                             return false;
+                                        }
+                                   }
+
+                                   if (this.currentFilters.dateTo) {
+                                        const toDate = new Date(this.currentFilters.dateTo);
+                                        if (commitDate > toDate) {
+                                             return false;
+                                        }
+                                   }
+                              }
+
+                              return true;
+                         });
+                    }
+
+                    exportModifiedJson() {
+                         const timestamp = new Date().toISOString().replace("T", "_").replace(/:/g, "-").substring(0, 19);
+
+                         // 1. Create clean original data (without user modifications)
+                         const cleanCommits = this.allCommits.map((commit) => {
+                              const cleanCommit = { ...commit };
+                              // Remove user modification properties
+                              delete cleanCommit.commit_log_modified;
+                              delete cleanCommit.bugs_modified;
+                              delete cleanCommit._sourceFile;
+                              return cleanCommit;
+                         });
+
+                         const originalData = {
+                              ...this.originalData,
+                              commits: cleanCommits,
+                              generated_on: new Date().toISOString().replace("T", " ").substring(0, 19),
+                              title: this.originalData.title + " (Clean Merged)",
+                         };
+
+                         // Remove source files info for clean export
+                         delete originalData._sourceFiles;
+
+                         // 2. Create user modifications file
+                         const userModifications = {
+                              version: "1.0",
+                              type: "changelog_modifications",
+                              generated_on: new Date().toISOString().replace("T", " ").substring(0, 19),
+                              description: "User modifications for changelog commits. Import this file to apply changes to original data.",
+                              modifications: [],
+                         };
+
+                         // Extract only the actual changes (deltas)
+                         this.allCommits.forEach((commit) => {
+                              const hasCommitLogMod = commit.commit_log_modified && commit.commit_log_modified.trim() !== "";
+                              const hasBugsMod = commit.bugs_modified !== undefined;
+
+                              if (hasCommitLogMod || hasBugsMod) {
+                                   const modification = {
+                                        commit_hash: commit.commit_hash,
+                                   };
+
+                                   // Only include commit log modification if it exists
+                                   if (hasCommitLogMod) {
+                                        modification.commit_log_modified = commit.commit_log_modified;
+                                   }
+
+                                   // Only include bug modifications if they exist
+                                   if (hasBugsMod) {
+                                        modification.bugs_modified = commit.bugs_modified;
+                                   }
+
+                                   userModifications.modifications.push(modification);
+                              }
+                         });
+
+                         // Export both files
+                         this.downloadJsonFile(originalData, `changelog_original_${timestamp}.json`);
+
+                         if (userModifications.modifications.length > 0) {
+                              this.downloadJsonFile(userModifications, `changelog_modifications_${timestamp}.json`);
+                         }
+
+                         // Show success message
+                         const successMsg = document.createElement("div");
+                         successMsg.style.cssText = `
+                    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                    background: #28a745; color: white; padding: 10px 20px;
+                    border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                `;
+
+                         if (userModifications.modifications.length > 0) {
+                              successMsg.textContent = `✅ Exported: Original data + ${userModifications.modifications.length} modifications`;
+                         } else {
+                              successMsg.textContent = "✅ Exported: Original data (no modifications found)";
+                         }
+
+                         document.body.appendChild(successMsg);
+
+                         setTimeout(() => {
+                              if (successMsg.parentNode) {
+                                   document.body.removeChild(successMsg);
+                              }
+                         }, 4000);
+                    }
+
+                    exportModificationsOnly() {
+                         const timestamp = new Date().toISOString().replace("T", "_").replace(/:/g, "-").substring(0, 19);
+
+                         // Create user modifications file
+                         const userModifications = {
+                              version: "1.0",
+                              type: "changelog_modifications",
+                              generated_on: new Date().toISOString().replace("T", " ").substring(0, 19),
+                              description: "User modifications for changelog commits. Import this file to apply changes to original data.",
+                              modifications: [],
+                         };
+
+                         // Extract only the actual changes (deltas)
+                         this.allCommits.forEach((commit) => {
+                              const hasCommitLogMod = commit.commit_log_modified && commit.commit_log_modified.trim() !== "";
+                              const hasBugsMod = commit.bugs_modified !== undefined;
+
+                              if (hasCommitLogMod || hasBugsMod) {
+                                   const modification = {
+                                        commit_hash: commit.commit_hash,
+                                   };
+
+                                   // Only include commit log modification if it exists
+                                   if (hasCommitLogMod) {
+                                        modification.commit_log_modified = commit.commit_log_modified;
+                                   }
+
+                                   // Only include bug modifications if they exist
+                                   if (hasBugsMod) {
+                                        modification.bugs_modified = commit.bugs_modified;
+                                   }
+
+                                   userModifications.modifications.push(modification);
+                              }
+                         });
+
+                         // Check if there are any modifications to export
+                         if (userModifications.modifications.length === 0) {
+                              // Show warning message
+                              const warningMsg = document.createElement("div");
+                              warningMsg.style.cssText = `
+                        position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                        background: #ffc107; color: #212529; padding: 10px 20px;
+                        border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                    `;
+                              warningMsg.textContent = "⚠️ No modifications found to export";
+                              document.body.appendChild(warningMsg);
+
+                              setTimeout(() => {
+                                   if (warningMsg.parentNode) {
+                                        document.body.removeChild(warningMsg);
+                                   }
+                              }, 3000);
+                              return;
+                         }
+
+                         // Export modifications file
+                         this.downloadJsonFile(userModifications, `changelog_modifications_${timestamp}.json`);
+
+                         // Show success message
+                         const successMsg = document.createElement("div");
+                         successMsg.style.cssText = `
+                    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                    background: #17a2b8; color: white; padding: 10px 20px;
+                    border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                `;
+                         successMsg.textContent = `✅ Exported ${userModifications.modifications.length} modifications`;
+                         document.body.appendChild(successMsg);
+
+                         setTimeout(() => {
+                              if (successMsg.parentNode) {
+                                   document.body.removeChild(successMsg);
+                              }
+                         }, 3000);
+                    }
+
+                    resetAllData() {
+                         // Reset all data
+                         this.loadedFiles = [];
+                         this.commitMap.clear();
+                         this.allCommits = [];
+                         this.originalData = null;
+                         this.pendingModifications = null;
+
+                         // Reset UI
+                         this.contentDiv.style.display = "none";
+                         this.componentsContainer.innerHTML = "";
+                         this.changelogInfoDiv.innerHTML = "";
+                         this.collapseToggle.style.display = "none";
+                         this.loadedFileName.textContent = "No file loaded";
+                         this.loadedFilesList.style.display = "none";
+                         this.loadedFilesContainer.innerHTML = "";
+
+                         // Expand file input section
+                         this.dropZone.classList.remove("collapsed");
+                         this.collapseToggle.textContent = "−";
+                         this.collapseToggle.title = "Collapse file input";
+
+                         // Clear filters
+                         this.clearAllFilters();
+
+                         // Show success message
+                         const successMsg = document.createElement("div");
+                         successMsg.style.cssText = `
+                    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                    background: #dc3545; color: white; padding: 10px 20px;
+                    border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                `;
+                         successMsg.textContent = "🗑️ All data cleared successfully";
+                         document.body.appendChild(successMsg);
+
+                         setTimeout(() => {
+                              if (successMsg.parentNode) {
+                                   document.body.removeChild(successMsg);
+                              }
+                         }, 3000);
+                    }
+
+                    downloadJsonFile(data, filename) {
+                         const dataStr = JSON.stringify(data, null, 2);
+                         const dataBlob = new Blob([dataStr], { type: "application/json" });
+                         const url = URL.createObjectURL(dataBlob);
+
+                         const link = document.createElement("a");
+                         link.href = url;
+                         link.download = filename;
+                         document.body.appendChild(link);
+                         link.click();
+                         document.body.removeChild(link);
+
+                         // Clean up the URL
+                         URL.revokeObjectURL(url);
+                    }
+
+                    updateResultsSummary(filteredCount, totalCount) {
+                         if (filteredCount === totalCount) {
+                              this.resultsSummaryDiv.style.display = "none";
+                         } else {
+                              this.resultsSummaryDiv.innerHTML = `
+                        Showing ${filteredCount} of ${totalCount} commits 
+                        ${filteredCount === 0 ? "(No commits match the current filters)" : ""}
+                    `;
+                              this.resultsSummaryDiv.style.display = "block";
+                         }
+                    }
+
+                    updateLoadedFilesList() {
+                         if (this.loadedFiles.length === 0) {
+                              this.loadedFilesList.style.display = "none";
+                              return;
+                         }
+
+                         this.loadedFilesList.style.display = "block";
+                         this.loadedFilesContainer.innerHTML = "";
+
+                         this.loadedFiles.forEach((file, index) => {
+                              const fileItem = document.createElement("div");
+                              fileItem.className = "loaded-file-item";
+
+                              if (file.isModificationsFile) {
+                                   // Style modifications files differently
+                                   fileItem.style.background = "#e3f2fd";
+                                   fileItem.style.borderColor = "#2196f3";
+                              }
+
+                              const detailsText = file.isModificationsFile ? `${file.commitCount} modifications • ${this.escapeHtml(file.title)}` : `${file.commitCount} commits${file.title ? ` • ${this.escapeHtml(file.title)}` : ""}`;
+
+                              fileItem.innerHTML = `
+                                   <div class="loaded-file-info">
+                                        <div class="loaded-file-name">${file.isModificationsFile ? "📝 " : ""}${this.escapeHtml(file.name)}</div>
+                                        <div class="loaded-file-details">${detailsText}</div>
+                                   </div>
+                                   <button class="remove-file-btn" data-file-index="${index}">Remove</button>
+                              `;
+
+                              this.loadedFilesContainer.appendChild(fileItem);
+                         });
+
+                         // Add event listeners for remove buttons
+                         this.loadedFilesContainer.addEventListener("click", (e) => {
+                              if (e.target.classList.contains("remove-file-btn")) {
+                                   const fileIndex = parseInt(e.target.dataset.fileIndex);
+                                   this.removeLoadedFile(fileIndex);
+                              }
+                         });
+
+                         // Add event listener for reset button (moved here since it's dynamically in DOM)
+                         const resetBtn = document.getElementById("resetDataBtn");
+                         if (resetBtn) {
+                              resetBtn.addEventListener("click", () => this.resetAllData());
+                         }
+                    }
+
+                    removeLoadedFile(fileIndex) {
+                         if (fileIndex < 0 || fileIndex >= this.loadedFiles.length) {
+                              return;
+                         }
+
+                         const fileToRemove = this.loadedFiles[fileIndex];
+
+                         // Remove file from loadedFiles array
+                         this.loadedFiles.splice(fileIndex, 1);
+
+                         let itemsRemoved = 0;
+
+                         if (fileToRemove.isModificationsFile) {
+                              // Clear pending modifications
+                              this.pendingModifications = null;
+                              itemsRemoved = fileToRemove.commitCount;
+                         } else {
+                              // Remove commits that came from this file
+                              const commitsToRemove = [];
+                              this.commitMap.forEach((commit, hash) => {
+                                   if (commit._sourceFile === fileToRemove.name) {
+                                        commitsToRemove.push(hash);
+                                   }
+                              });
+
+                              commitsToRemove.forEach((hash) => {
+                                   this.commitMap.delete(hash);
+                              });
+                              itemsRemoved = commitsToRemove.length;
+                         }
+
+                         // Update data and display
+                         if (this.loadedFiles.length === 0) {
+                              // No more files - reset everything
+                              this.resetAllData();
+                         } else {
+                              const hasChangelogFiles = this.loadedFiles.some((f) => !f.isModificationsFile);
+                              if (hasChangelogFiles) {
+                                   // Rebuild data with remaining files
+                                   this.finalizeData();
+                              } else {
+                                   // Only modifications files left
+                                   this.updateLoadedFilesList();
+                                   this.showPendingModificationsInfo();
+                              }
+                         }
+
+                         // Show feedback
+                         const successMsg = document.createElement("div");
+                         successMsg.style.cssText = `
+                              position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                              background: #ffc107; color: #212529; padding: 10px 20px;
+                              border-radius: 4px; z-index: 1001; font-size: 0.9em;
+                         `;
+
+                         const itemType = fileToRemove.isModificationsFile ? "modifications" : "commits";
+                         successMsg.textContent = `🗑️ Removed "${fileToRemove.name}" (${itemsRemoved} ${itemType})`;
+                         document.body.appendChild(successMsg);
+
+                         setTimeout(() => {
+                              if (successMsg.parentNode) {
+                                   document.body.removeChild(successMsg);
+                              }
+                         }, 3000);
+                    }
+
+                    showPendingModificationsInfo() {
+                         // Show that modifications are loaded and waiting for changelog data
+                         this.hideError();
+
+                         let infoHtml = `
+                              <h3>Modifications File Loaded</h3>
+                              <p><strong>Status:</strong> Waiting for changelog data to apply modifications</p>
+                         `;
+
+                         if (this.pendingModifications) {
+                              const modCount = this.pendingModifications.modifications ? this.pendingModifications.modifications.length : 0;
+                              infoHtml += `
+                                   <p><strong>Modifications ready:</strong> ${modCount} commit modifications</p>
+                                   <p><strong>Generated on:</strong> ${this.pendingModifications.generated_on || "Unknown"}</p>
+                                   <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                                        <strong>Next step:</strong> Load one or more changelog JSON files to apply these modifications.
+                                   </div>
+                              `;
+                         }
+
+                         this.changelogInfoDiv.innerHTML = infoHtml;
+                         this.contentDiv.style.display = "block";
+                    }
+               }
+
+               // Initialize the parser when the page loads
+               document.addEventListener("DOMContentLoaded", () => {
+                    new ChangelogParser();
+               });
+          </script>
+     </body>
+</html>
