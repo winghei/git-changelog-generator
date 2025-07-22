@@ -15,7 +15,7 @@ A comprehensive collection of tools to generate, format, and visualize changelog
 ### Global Installation (Recommended)
 ```bash
 # Install globally from npm
-npm install -g git-changelog-generator
+npm install -g git-changelog-tool
 
 # Now you can run from anywhere:
 git-changelog --since "1 week ago"
@@ -26,7 +26,7 @@ git-changelog-parser
 ### Local Installation
 ```bash
 # Install locally in your project
-npm install git-changelog-generator
+npm install git-changelog-tool
 
 # Run via npx
 npx git-changelog --since "1 week ago"
@@ -50,7 +50,7 @@ make install
 
 1. **Global Installation:**
    ```bash
-   npm install -g git-changelog-generator
+   npm install -g git-changelog-tool
    git-changelog --since "1 week ago"
    ```
 
