@@ -141,6 +141,11 @@ get_latest_tag_commit() {
     fi
 }
 
+# Function to get the previous tag (second most recent)
+get_previous_tag() {
+    git tag --sort=-creatordate | grep -v "^$TAG_PREFIX$VERSION$" | head -n 1 || echo ""
+}
+
 # Function to parse version from tag
 parse_version_from_tag() {
     local tag="$1"
@@ -230,12 +235,12 @@ generate_changelog() {
     local changelog_args=()
     
     if [[ "$SINCE_LAST_TAG" == "true" ]]; then
-        local latest_tag=$(get_latest_tag)
-        if [[ -n "$latest_tag" ]]; then
-            local latest_tag_commit=$(get_latest_tag_commit "$latest_tag")
-            if [[ -n "$latest_tag_commit" ]]; then
-                changelog_args+=("--since" "$latest_tag_commit")
-                log_info "Generating changelog since last tag commit: $latest_tag ($latest_tag_commit)"
+        local previous_tag=$(get_previous_tag)
+        if [[ -n "$previous_tag" ]]; then
+            local previous_tag_commit=$(get_latest_tag_commit "$previous_tag")
+            if [[ -n "$previous_tag_commit" ]]; then
+                changelog_args+=("--since" "$previous_tag_commit")
+                log_info "Generating changelog since previous tag commit: $previous_tag ($previous_tag_commit)"
             else
                 log_info "No previous tag commit found, generating full history"
             fi
