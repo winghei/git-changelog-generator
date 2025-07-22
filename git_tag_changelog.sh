@@ -237,13 +237,8 @@ generate_changelog() {
     if [[ "$SINCE_LAST_TAG" == "true" ]]; then
         local previous_tag=$(get_previous_tag)
         if [[ -n "$previous_tag" ]]; then
-            local previous_tag_commit=$(get_latest_tag_commit "$previous_tag")
-            if [[ -n "$previous_tag_commit" ]]; then
-                changelog_args+=("--since" "$previous_tag_commit")
-                log_info "Generating changelog since previous tag commit: $previous_tag ($previous_tag_commit)"
-            else
-                log_info "No previous tag commit found, generating full history"
-            fi
+            changelog_args+=("--range" "$previous_tag..HEAD")
+            log_info "Generating changelog for range: $previous_tag..HEAD"
         else
             log_info "No previous tags found, generating full history"
         fi

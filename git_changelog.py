@@ -46,18 +46,19 @@ class GitChangelogGenerator:
             sys.exit(1)
 
     def get_commits(self, since: Optional[str] = None, until: Optional[str] = None, 
-                   branch: str = 'HEAD', max_count: Optional[int] = None) -> List[Dict]:
-        """Get commits from git log with specified filters."""
-        cmd = ['log', '--pretty=format:%H|%s|%an|%ad|%b', '--date=short']
-        
-        if since:
-            cmd.extend(['--since', since])
-        if until:
-            cmd.extend(['--until', until])
-        if max_count:
-            cmd.extend(['-n', str(max_count)])
-        
-        cmd.append(branch)
+                   branch: str = 'HEAD', max_count: Optional[int] = None, range_arg: Optional[str] = None) -> List[Dict]:
+        """Get commits from git log with specified filters or range."""
+        if range_arg:
+            cmd = ['log', '--pretty=format:%H|%s|%an|%ad|%b', '--date=short', range_arg]
+        else:
+            cmd = ['log', '--pretty=format:%H|%s|%an|%ad|%b', '--date=short']
+            if since:
+                cmd.extend(['--since', since])
+            if until:
+                cmd.extend(['--until', until])
+            if max_count:
+                cmd.extend(['-n', str(max_count)])
+            cmd.append(branch)
         
         output = self.run_git_command(cmd)
         commits = []
@@ -181,6 +182,7 @@ def main():
     parser.add_argument('--until', help='Show commits until date')
     parser.add_argument('--branch', default='HEAD', help='Branch to analyze (default: HEAD)')
     parser.add_argument('--max-count', type=int, help='Maximum number of commits to include')
+    parser.add_argument('--range', dest='range_arg', help='Commit/tag range (e.g., v0.1.1..HEAD)')
     parser.add_argument('--format', choices=['markdown', 'simple', 'json'], default='markdown',
                        help='Output format (default: markdown)')
     parser.add_argument('--title', default='Changelog', help='Title for the changelog')
@@ -195,7 +197,8 @@ def main():
         since=args.since,
         until=args.until,
         branch=args.branch,
-        max_count=args.max_count
+        max_count=args.max_count,
+        range_arg=args.range_arg
     )
     
     if not commits:
