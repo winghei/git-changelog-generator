@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.2.0] - 2025-07-22
+
+
+## 🐛 Bug Fixes
+
+- add support for commit range in changelog generation ([c58cd8c1](../../commit/c58cd8c13b45836f58e48d37003cf9573cc73f51))
+
+  Enhance the get_commits function to accept a range argument for
+- add function to get previous tag commit ([5282a119](../../commit/5282a119c3527014d7d4eff7618f3fd10ea5f355))
+
+  Implement get_previous_tag function to retrieve the second most recent
+- add function to get latest tag commit hash ([75cc956a](../../commit/75cc956a65e97e88ccf11b6c94304bb2e4303924))
+
+  Implement get_latest_tag_commit function to retrieve the commit hash
+
+## 🔧 Chores
+
+- update README with correct package name ([3e91e1fc](../../commit/3e91e1fc7bb2f126003e828bbd44d573e9b6a821))
+
+  Change references from git-changelog-generator to git-changelog-tool
+
+
 ## [0.1.1] - 2025-07-03
 
 
