@@ -131,6 +131,16 @@ get_latest_tag() {
     git describe --tags --abbrev=0 2>/dev/null || echo ""
 }
 
+# Function to get the latest tag commit hash
+get_latest_tag_commit() {
+    local tag="$1"
+    if [[ -n "$tag" ]]; then
+        git rev-list -n 1 "$tag"
+    else
+        echo ""
+    fi
+}
+
 # Function to parse version from tag
 parse_version_from_tag() {
     local tag="$1"
@@ -222,8 +232,13 @@ generate_changelog() {
     if [[ "$SINCE_LAST_TAG" == "true" ]]; then
         local latest_tag=$(get_latest_tag)
         if [[ -n "$latest_tag" ]]; then
-            changelog_args+=("--since" "$latest_tag")
-            log_info "Generating changelog since last tag: $latest_tag"
+            local latest_tag_commit=$(get_latest_tag_commit "$latest_tag")
+            if [[ -n "$latest_tag_commit" ]]; then
+                changelog_args+=("--since" "$latest_tag_commit")
+                log_info "Generating changelog since last tag commit: $latest_tag ($latest_tag_commit)"
+            else
+                log_info "No previous tag commit found, generating full history"
+            fi
         else
             log_info "No previous tags found, generating full history"
         fi
