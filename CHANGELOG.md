@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.3.0] - 2025-09-04
+
+
+## ✨ Features
+
+- add timestamp option for JSON output ([fff41b41](../../commit/fff41b41c78f192e05a1fd987864bcdf91ddf9b9))
+
+  Enhance the changelog generation to include an optional Unix timestamp field in the JSON output. This allows for precise time analysis and sorting of commits. Update command-line interface to support --include-time flag for users to enable this feature.
+
+
 ## [0.2.0] - 2025-07-22
 
 
