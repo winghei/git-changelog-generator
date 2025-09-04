@@ -324,11 +324,9 @@ generate_json() {
             local date=""
             local timestamp=""
             
+            date=$(git log --format='%ad' --date=short -n 1 "$hash")
             if [[ "$INCLUDE_TIME" == "true" ]]; then
-                date=$(git log --format='%ad' --date=iso -n 1 "$hash")
                 timestamp=$(git log --format='%at' -n 1 "$hash")
-            else
-                date=$(git log --format='%ad' --date=short -n 1 "$hash")
             fi
             
             if [[ -n "$hash" ]]; then
@@ -407,6 +405,9 @@ generate_json() {
                 echo -n "\"commit_log\": \"$escaped_subject\", "
                 echo -n "\"commit_hash\": \"$hash\", "
                 echo -n "\"date\": \"$date\", "
+                if [[ "$INCLUDE_TIME" == "true" && -n "$timestamp" ]]; then
+                    echo -n "\"timestamp\": $timestamp, "
+                fi
                 echo -n "\"author\": \"$escaped_author\""
                 local branches_array=$(convert_branches_to_json_array "$branches")
                 if [[ -n "$branches_array" ]]; then

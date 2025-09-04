@@ -82,6 +82,9 @@ The shell script provides quick changelog generation with JSON and text output f
 # Last 20 commits in JSON format
 ./git_changelog.sh --max-count 20 --format json --output recent_changes.json
 
+# JSON with timestamp for precise time analysis
+./git_changelog.sh --max-count 20 --format json --include-time --output recent_changes_with_time.json
+
 # Changes between two dates
 ./git_changelog.sh --since "2023-12-01" --until "2023-12-31" --format text
 
@@ -98,7 +101,7 @@ The shell script provides quick changelog generation with JSON and text output f
 - `-n, --max-count` - Maximum number of commits to include
 - `-o, --output` - Output file (default: stdout)
 - `-t, --title` - Title for the changelog (default: Changelog)
-- `--include-time` - Include commit time in the output
+- `--include-time` - Include Unix timestamp field in JSON output for precise time information
 
 ### Git Tag and Changelog Tool (`git_tag_changelog.sh`)
 
@@ -153,6 +156,9 @@ python3 git_changelog.py --since "1 month ago" --format markdown --title "Releas
 # JSON output for web parser
 python3 git_changelog.py --since "1 week ago" --format json --output changes.json
 
+# JSON with timestamp for precise time analysis
+python3 git_changelog.py --since "1 week ago" --format json --include-time --output changes_with_time.json
+
 # Simple text list
 python3 git_changelog.py --max-count 50 --format simple
 ```
@@ -164,6 +170,7 @@ python3 git_changelog.py --max-count 50 --format simple
 - `--branch` - Branch to analyze (default: HEAD)
 - `--max-count` - Maximum number of commits
 - `--format` - Output format: `markdown`, `simple`, or `json` (default: markdown)
+- `--include-time` - Include Unix timestamp in JSON output for precise time information
 - `--title` - Title for the changelog
 - `--output` - Output file (default: stdout)
 
@@ -242,6 +249,7 @@ The parser provides comprehensive filtering options:
 - Includes branches, files, bug tracking, and extended metadata
 - Perfect for use with the web parser
 - Supports bug mention parsing (`@bug:type` format)
+- Optional timestamp field with `--include-time` flag for precise time information
 
 ### Text Format (Shell Script)
 - Human-readable format with emoji categorization
@@ -290,6 +298,8 @@ The shell script supports bug mention parsing in commit messages:
 
 Both tools generate/expect JSON in this format:
 
+> **Note**: The `timestamp` field is only included when using the `--include-time` flag. It contains a Unix timestamp (seconds since epoch) for precise time analysis and sorting.
+
 ```json
 {
   "title": "Changelog (since date)",
@@ -300,7 +310,8 @@ Both tools generate/expect JSON in this format:
       "component": "component-name",
       "commit_log": "Commit message description", 
       "commit_hash": "abc123def",
-      "date": "2025-06-27 14:03:28 +0200",
+      "date": "2025-06-27",
+      "timestamp": 1753203154,
       "author": "Author Name",
       "branches": ["branch1", "branch2"],
       "bugs": ["BUG-123", "BUG-456"],

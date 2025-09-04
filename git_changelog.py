@@ -46,12 +46,19 @@ class GitChangelogGenerator:
             sys.exit(1)
 
     def get_commits(self, since: Optional[str] = None, until: Optional[str] = None, 
-                   branch: str = 'HEAD', max_count: Optional[int] = None, range_arg: Optional[str] = None) -> List[Dict]:
+                   branch: str = 'HEAD', max_count: Optional[int] = None, range_arg: Optional[str] = None, include_time: bool = False) -> List[Dict]:
         """Get commits from git log with specified filters or range."""
-        if range_arg:
-            cmd = ['log', '--pretty=format:%H|%s|%an|%ad|%b', '--date=short', range_arg]
+        # Choose format based on whether to include time
+        if include_time:
+            format_str = '%H|%s|%an|%ad|%at|%b'
         else:
-            cmd = ['log', '--pretty=format:%H|%s|%an|%ad|%b', '--date=short']
+            format_str = '%H|%s|%an|%ad|%b'
+        date_format = '--date=short'
+            
+        if range_arg:
+            cmd = ['log', f'--pretty=format:{format_str}', date_format, range_arg]
+        else:
+            cmd = ['log', f'--pretty=format:{format_str}', date_format]
             if since:
                 cmd.extend(['--since', since])
             if until:
@@ -69,14 +76,27 @@ class GitChangelogGenerator:
                 if current_commit:
                     commits.append(current_commit)
                 
-                parts = line.split('|', 4)
-                current_commit = {
-                    'hash': parts[0],
-                    'subject': parts[1],
-                    'author': parts[2],
-                    'date': parts[3],
-                    'body': parts[4] if len(parts) > 4 else ''
-                }
+                if include_time:
+                    # Format: hash|subject|author|date|timestamp|body
+                    parts = line.split('|', 5)
+                    current_commit = {
+                        'hash': parts[0],
+                        'subject': parts[1],
+                        'author': parts[2],
+                        'date': parts[3],
+                        'timestamp': int(parts[4]) if parts[4] else None,
+                        'body': parts[5] if len(parts) > 5 else ''
+                    }
+                else:
+                    # Format: hash|subject|author|date|body
+                    parts = line.split('|', 4)
+                    current_commit = {
+                        'hash': parts[0],
+                        'subject': parts[1],
+                        'author': parts[2],
+                        'date': parts[3],
+                        'body': parts[4] if len(parts) > 4 else ''
+                    }
             elif current_commit and line.strip():
                 current_commit['body'] += '\n' + line
         
@@ -186,6 +206,7 @@ def main():
     parser.add_argument('--format', choices=['markdown', 'simple', 'json'], default='markdown',
                        help='Output format (default: markdown)')
     parser.add_argument('--title', default='Changelog', help='Title for the changelog')
+    parser.add_argument('--include-time', action='store_true', help='Include timestamp in JSON output')
     parser.add_argument('--output', help='Output file (default: stdout)')
     
     args = parser.parse_args()
@@ -198,7 +219,8 @@ def main():
         until=args.until,
         branch=args.branch,
         max_count=args.max_count,
-        range_arg=args.range_arg
+        range_arg=args.range_arg,
+        include_time=args.include_time
     )
     
     if not commits:
